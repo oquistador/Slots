@@ -13,8 +13,7 @@
     symbol: {
       src: 'symbols_sheet.png',
       width: 100,
-      height: 100,
-      probabilities: [0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9]
+      height: 100
     },
     reel: {
       width: 100,
@@ -24,6 +23,51 @@
       spinDuration: 0.4,
       spinDelay: 0.5,
       speed: 2000
+    },
+    calculator: {
+      payouts: [
+        {
+          symbol: 0,
+          probability: 5,
+          wins: [50, 300, 1000]
+        }, {
+          symbol: 1,
+          probability: 10,
+          wins: [40, 200, 750]
+        }, {
+          symbol: 2,
+          probability: 10,
+          wins: [30, 100, 500]
+        }, {
+          symbol: 3,
+          probability: 10,
+          wins: [20, 50, 300]
+        }, {
+          symbol: 4,
+          probability: 30,
+          wins: [10, 40, 200]
+        }, {
+          symbol: 5,
+          probability: 30,
+          wins: [5, 25, 100]
+        }, {
+          symbol: 6,
+          probability: 30,
+          wins: [5, 25, 100]
+        }, {
+          symbol: 7,
+          probability: 30,
+          wins: [5, 25, 100]
+        }, {
+          symbol: 8,
+          probability: 10,
+          wins: [50, 300, 1000]
+        }, {
+          symbol: 9,
+          probability: 5,
+          wins: [400, 1200, 4000]
+        }
+      ]
     }
   };
 
@@ -46,6 +90,7 @@
   };
 
   Slots.init = function() {
+    Slots.calculator = new Slots.Calculator;
     Slots.symbolBuilder = new Slots.SymbolBuilder;
     Slots.state = new Slots.State;
     createjs.Ticker.timingMod = createjs.Ticker.RAF_SYNCHED;
@@ -53,9 +98,69 @@
     return createjs.Ticker.addEventListener('tick', Slots.state.tick);
   };
 
+  Slots.Calculator = (function() {
+    function Calculator(opts) {
+      var config;
+      config = {};
+      _.extend(config, Slots.config.calculator, opts);
+      this.payouts = config.payouts;
+      this.payouts.sort(function(a, b) {
+        if (a.probability < b.probability) {
+          return 1;
+        }
+        if (a.probability > b.probability) {
+          return -1;
+        }
+        return 0;
+      });
+      this.probabilityTotal = this.payouts.reduce((function(a, b) {
+        return a + b.probability;
+      }), 0);
+    }
+
+    Calculator.prototype.spawnValue = function() {
+      var ceil, floor, num, payout, _i, _len, _ref;
+      num = Math.random() * this.probabilityTotal;
+      ceil = 0;
+      _ref = this.payouts;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        payout = _ref[_i];
+        floor = ceil;
+        ceil += payout.probability;
+        if ((floor <= num && num < ceil)) {
+          return payout.symbol;
+        }
+      }
+      return payout.symbol;
+    };
+
+    Calculator.prototype.getSpinResults = function(opts) {
+      var defer, i, j, results, _i, _j;
+      defer = $.Deferred();
+      results = {};
+      results.values = [];
+      for (i = _i = 0; _i <= 4; i = ++_i) {
+        for (j = _j = 0; _j <= 2; j = ++_j) {
+          if (!results.values[i]) {
+            results.values[i] = [];
+          }
+          results.values[i][j] = this.spawnValue();
+        }
+      }
+      setTimeout((function() {
+        return defer.resolve(results);
+      }), 500);
+      return defer.promise();
+    };
+
+    return Calculator;
+
+  })();
+
   Slots.State = (function() {
     function State() {
       this.tick = __bind(this.tick, this);
+      this.handleSpinResults = __bind(this.handleSpinResults, this);
       var i, _i;
       this.reels = [];
       for (i = _i = 0; _i <= 4; i = ++_i) {
@@ -63,11 +168,32 @@
           position: i
         });
         Slots.stage.addChild(this.reels[i].container);
-        this.reels[i].spin({
-          values: [0, 0, 0]
-        });
       }
+      this.spin();
     }
+
+    State.prototype.spin = function() {
+      var reel, _i, _len, _ref;
+      _ref = this.reels;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        reel = _ref[_i];
+        reel.startSpin();
+      }
+      return Slots.calculator.getSpinResults().done(this.handleSpinResults);
+    };
+
+    State.prototype.handleSpinResults = function(results) {
+      var i, reel, _i, _len, _ref, _results;
+      _ref = this.reels;
+      _results = [];
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        reel = _ref[i];
+        _results.push(reel.completeSpin({
+          values: results.values[i]
+        }));
+      }
+      return _results;
+    };
 
     State.prototype.tick = function(evt) {
       var deltaS;
@@ -83,16 +209,19 @@
   })();
 
   Slots.Reel = (function() {
-    Reel.prototype.config = {};
-
     Reel.prototype.isSpinning = false;
 
     function Reel(opts) {
-      var i, symbol, _i;
-      _.extend(this.config, Slots.config.reel, opts);
+      var config, i, symbol, _i;
+      config = {};
+      _.extend(config, Slots.config.reel, opts);
+      this.spinDuration = config.spinDuration;
+      this.spinDelay = config.spinDelay;
+      this.position = config.position;
+      this.speed = config.speed;
       this.container = new createjs.Container;
-      this.container.y = this.config.regY;
-      this.container.x = this.config.position * this.config.width + this.config.regX;
+      this.container.y = config.regY;
+      this.container.x = config.position * config.width + config.regX;
       for (i = _i = 0; _i <= 3; i = ++_i) {
         symbol = Slots.symbolBuilder.newSprite();
         symbol.y = symbol.height * i;
@@ -100,11 +229,19 @@
       }
     }
 
-    Reel.prototype.spin = function(opts) {
-      this.values = opts.values.concat(Slots.symbolBuilder.spawnValue());
+    Reel.prototype.startSpin = function() {
+      this.values = null;
       this.isSpinning = true;
       this.isFinalPass = false;
-      return this.timeSpinning = -this.config.position * this.config.spinDelay;
+      return this.timeSpinning = 0;
+    };
+
+    Reel.prototype.completeSpin = function(opts) {
+      this.values = opts.values.concat(Slots.calculator.spawnValue());
+      if (this.timeSpinning > this.spinDuration) {
+        this.timeSpinning = this.spinDuration;
+      }
+      return this.timeSpinning -= this.spinDelay * this.position;
     };
 
     Reel.prototype.update = function(deltaS) {
@@ -113,8 +250,8 @@
         return;
       }
       this.timeSpinning += deltaS;
-      this.isFinalPass = this.timeSpinning >= this.config.spinDuration;
-      deltaPixels = this.config.speed * deltaS;
+      this.isFinalPass = this.timeSpinning >= this.spinDuration && this.values;
+      deltaPixels = this.speed * deltaS;
       top = this.container.children[0].y - deltaPixels;
       if (this.isFinalPass && this.values.length === 0) {
         if (top < 0) {
@@ -157,14 +294,10 @@
       this.config.numFramsPerSymbol = Math.floor(this.config.image.width / this.config.width);
     }
 
-    SymbolBuilder.prototype.spawnValue = function() {
-      return _.shuffle(_.clone(this.config.probabilities))[0];
-    };
-
     SymbolBuilder.prototype.newSprite = function(value) {
       var firstFrame, lastFrame, sheet, sprite, _i, _j, _ref, _ref1, _results, _results1;
       if (value == null) {
-        value = this.spawnValue();
+        value = Slots.calculator.spawnValue();
       }
       firstFrame = value * this.config.numFramsPerSymbol;
       lastFrame = (value + 1) * this.config.numFramsPerSymbol - 1;

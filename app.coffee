@@ -8,18 +8,6 @@ Slots.config =
 		src: 'symbols_sheet.png'
 		width: 100
 		height: 100
-		probabilities: [
-			0,
-			1, 1,
-			2, 2, 2,
-			3, 3, 3, 3,
-			4, 4, 4, 4, 4,
-			5, 5, 5, 5, 5, 5,
-			6, 6, 6, 6, 6, 6, 6,
-			7, 7, 7, 7, 7, 7, 7, 7,
-			8, 8, 8, 8
-			9
-		]
 	reel:
 		width: 100
 		height: 300
@@ -28,6 +16,19 @@ Slots.config =
 		spinDuration: 0.4
 		spinDelay: 0.5
 		speed: 2000
+	calculator:
+		payouts: [
+			{symbol: 0, probability: 5, wins: [50, 300, 1000]}
+			{symbol: 1, probability: 10, wins: [40, 200, 750]}
+			{symbol: 2, probability: 10, wins: [30, 100, 500]}
+			{symbol: 3, probability: 10, wins: [20, 50, 300]}
+			{symbol: 4, probability: 30, wins: [10, 40, 200]}
+			{symbol: 5, probability: 30, wins: [5, 25, 100]}
+			{symbol: 6, probability: 30, wins: [5, 25, 100]}
+			{symbol: 7, probability: 30, wins: [5, 25, 100]}
+			{symbol: 8, probability: 10, wins: [50, 300, 1000]}
+			{symbol: 9, probability: 5, wins: [400, 1200, 4000]}
+		]
 
 Slots.load = ->
 	canvas = document.createElement 'canvas'
@@ -47,12 +48,54 @@ Slots.load = ->
 	@loader.loadManifest manifest
 
 Slots.init = =>
+	Slots.calculator = new Slots.Calculator
 	Slots.symbolBuilder = new Slots.SymbolBuilder
 	Slots.state = new Slots.State
 
 	createjs.Ticker.timingMod = createjs.Ticker.RAF_SYNCHED
 	createjs.Ticker.setFPS Slots.config.targetFPS
 	createjs.Ticker.addEventListener 'tick', Slots.state.tick
+
+class Slots.Calculator
+	constructor: (opts)->
+		config = {}
+		
+		_.extend config, Slots.config.calculator, opts
+
+		@payouts = config.payouts
+		
+		@payouts.sort (a, b)->
+			return 1 if a.probability < b.probability
+			return -1 if a.probability > b.probability
+			0
+
+		@probabilityTotal = @payouts.reduce ((a, b)-> a + b.probability), 0
+
+	spawnValue: ->
+		num = Math.random() * @probabilityTotal
+		
+		ceil = 0
+		for payout in @payouts
+			floor = ceil
+			ceil += payout.probability
+
+			return payout.symbol if floor <= num < ceil
+
+		payout.symbol
+
+	getSpinResults: (opts)->
+		defer = $.Deferred()
+		results = {}
+		results.values = []
+
+		for i in [0..4]
+			for j in [0..2]
+				results.values[i] = [] unless results.values[i]
+				results.values[i][j] = @spawnValue()
+
+		setTimeout (-> defer.resolve results), 500
+
+		defer.promise()
 
 class Slots.State
 	constructor: ->
@@ -61,7 +104,16 @@ class Slots.State
 		for i in [0..4]
 			@reels[i] = new Slots.Reel position: i
 			Slots.stage.addChild @reels[i].container
-			@reels[i].spin values: [0, 0, 0]
+
+		@spin()
+
+	spin: ->
+		reel.startSpin() for reel in @reels
+		Slots.calculator.getSpinResults().done @handleSpinResults
+
+	handleSpinResults: (results)=>
+		for reel, i in @reels
+			reel.completeSpin values: results.values[i]
 
 	tick: (evt)=>
 		deltaS = evt.delta / 1000
@@ -71,15 +123,21 @@ class Slots.State
 		return
 
 class Slots.Reel
-	config: {}
 	isSpinning: false
 
 	constructor: (opts)->
-		_.extend @config, Slots.config.reel, opts
+		config = {}
+
+		_.extend config, Slots.config.reel, opts
+
+		@spinDuration = config.spinDuration
+		@spinDelay = config.spinDelay
+		@position = config.position
+		@speed = config.speed
 
 		@container = new createjs.Container
-		@container.y = @config.regY
-		@container.x = @config.position * @config.width + @config.regX
+		@container.y = config.regY
+		@container.x = config.position * config.width + config.regX
 
 		for i in [0..3]
 			symbol = Slots.symbolBuilder.newSprite()
@@ -87,20 +145,25 @@ class Slots.Reel
 
 			@container.addChild symbol
 
-	spin: (opts)->
-		@values = opts.values.concat Slots.symbolBuilder.spawnValue()
+	startSpin: ()->
+		@values = null
 		@isSpinning = true
 		@isFinalPass = false
-		@timeSpinning = - @config.position * @config.spinDelay
+		@timeSpinning = 0
+
+	completeSpin: (opts)->
+		@values = opts.values.concat Slots.calculator.spawnValue()
+		@timeSpinning = @spinDuration if @timeSpinning > @spinDuration
+		@timeSpinning -= @spinDelay * @position
 
 	update: (deltaS)->
 		return unless @isSpinning
 
 		@timeSpinning += deltaS
 
-		@isFinalPass = @timeSpinning >= @config.spinDuration
+		@isFinalPass = @timeSpinning >= @spinDuration and @values
 
-		deltaPixels = @config.speed * deltaS
+		deltaPixels = @speed * deltaS
 
 		top = @container.children[0].y - deltaPixels
 
@@ -143,10 +206,7 @@ class Slots.SymbolBuilder
 		@config.numSymbols = Math.floor(@config.image.height / @config.height)
 		@config.numFramsPerSymbol = Math.floor(@config.image.width / @config.width)
 
-	spawnValue: ->
-		 _.shuffle(_.clone(@config.probabilities))[0]
-
-	newSprite: (value = @spawnValue())->
+	newSprite: (value = Slots.calculator.spawnValue())->
 		firstFrame = value * @config.numFramsPerSymbol
 		lastFrame = (value + 1) * @config.numFramsPerSymbol - 1
 
