@@ -138,6 +138,11 @@ class Slots.Reel
 		@container = new createjs.Container
 		@container.y = config.regY
 		@container.x = config.position * config.width + config.regX
+		@container.width = config.width
+		@container.height = config.height
+		@container.name = "reel#{@position}"
+
+		@blurFilter = new createjs.BlurFilter 0, 10, 1
 
 		for i in [0..3]
 			symbol = Slots.symbolBuilder.newSprite()
@@ -145,11 +150,15 @@ class Slots.Reel
 
 			@container.addChild symbol
 
+		@container.cache 0, 0, @container.width, @container.height
+
 	startSpin: ()->
 		@values = null
 		@isSpinning = true
 		@isFinalPass = false
 		@timeSpinning = 0
+		@container.filters = [@blurFilter]
+
 
 	completeSpin: (opts)->
 		@values = opts.values.concat Slots.calculator.spawnValue()
@@ -171,7 +180,7 @@ class Slots.Reel
 			if top < 0
 				top = 0
 				@isSpinning = false
-
+				@container.filters = null
 		else
 			threshhold = - @container.children[0].height
 
@@ -192,7 +201,7 @@ class Slots.Reel
 		for symbol, i in @container.children
 			symbol.y = top  + (i * symbol.height)
 
-		return
+		@container.updateCache()
 
 
 class Slots.SymbolBuilder
