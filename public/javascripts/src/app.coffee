@@ -5,7 +5,7 @@ Slots.config =
 	width: 500
 	height: 400
 	symbol: 
-		src: 'symbols_sheet.png'
+		src: '/images/symbols_sheet.png'
 		width: 100
 		height: 100
 	reel:
