@@ -4,7 +4,13 @@ Slots.config =
 	targetFPS: 60
 	width: 500
 	height: 400
-	symbol: 
+	buttons:
+		src: '/images/buttons_sheet.png'
+		width: 100
+		height: 50
+		x: 200
+		y: 325
+	symbols: 
 		src: '/images/symbols_sheet.png'
 		width: 100
 		height: 100
@@ -16,18 +22,29 @@ Slots.config =
 		spinDuration: 0.4
 		spinDelay: 0.5
 		speed: 2000
-	calculator:
-		payouts: [
-			{symbol: 0, probability: 5, wins: [50, 300, 1000]}
-			{symbol: 1, probability: 10, wins: [40, 200, 750]}
-			{symbol: 2, probability: 10, wins: [30, 100, 500]}
-			{symbol: 3, probability: 10, wins: [20, 50, 300]}
-			{symbol: 4, probability: 30, wins: [10, 40, 200]}
-			{symbol: 5, probability: 30, wins: [5, 25, 100]}
-			{symbol: 6, probability: 30, wins: [5, 25, 100]}
-			{symbol: 7, probability: 30, wins: [5, 25, 100]}
-			{symbol: 8, probability: 10, wins: [50, 300, 1000]}
-			{symbol: 9, probability: 5, wins: [400, 1200, 4000]}
+	payouts: [
+		{symbol: 0, probability: 5, wins: [50, 300, 1000]}
+		{symbol: 1, probability: 10, wins: [40, 200, 750]}
+		{symbol: 2, probability: 10, wins: [30, 100, 500]}
+		{symbol: 3, probability: 10, wins: [20, 50, 300]}
+		{symbol: 4, probability: 30, wins: [10, 40, 200]}
+		{symbol: 5, probability: 30, wins: [5, 25, 100]}
+		{symbol: 6, probability: 30, wins: [5, 25, 100]}
+		{symbol: 7, probability: 30, wins: [5, 25, 100]}
+		{symbol: 8, probability: 10, wins: [50, 300, 1000]}
+		{symbol: 9, probability: 5, wins: [400, 1200, 4000]}
+	]
+	lines:
+		matches: [
+			[1, 1, 1, 1, 1]
+			[2, 2, 2, 2, 2]
+			[0, 0, 0, 0, 0]
+			[2, 1, 0, 1, 2]
+			[0, 1, 2, 1, 0]
+			[1, 2, 2, 2, 1]
+			[1, 0, 0, 0, 1]
+			[2, 2, 1, 0, 0]
+			[0, 0, 1, 2, 2]
 		]
 
 Slots.load = ->
@@ -38,9 +55,12 @@ Slots.load = ->
 	document.body.appendChild canvas
 
 	@stage = new createjs.Stage canvas
+
+	@stage.enableMouseOver 10
 	
 	manifest = [
-		id: 'symbols', src: @config.symbol.src
+		{id: 'symbols', src: @config.symbols.src}
+		{id: 'buttons', src: @config.buttons.src}
 	]
 
 	@loader = new createjs.LoadQueue false
@@ -57,12 +77,9 @@ Slots.init = =>
 	createjs.Ticker.addEventListener 'tick', Slots.state.tick
 
 class Slots.Calculator
-	constructor: (opts)->
-		config = {}
-		
-		_.extend config, Slots.config.calculator, opts
-
-		@payouts = config.payouts
+	constructor: (opts = {})->
+		@payouts = opts.payouts or Slots.config.payouts
+		@lines = opts.lines or Slots.config.lines
 		
 		@payouts.sort (a, b)->
 			return 1 if a.probability < b.probability
@@ -83,6 +100,30 @@ class Slots.Calculator
 
 		payout.symbol
 
+	checkWins: (results, opts)->
+		results.winnings = 0
+		results.flash = []
+		results.lines = []
+
+		results.values = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+
+		for line, i in @lines.matches
+			break if i >= opts.numLinesBet
+			
+			lastSymbol = null
+			matched = 1
+			
+			for symbolI, reelI  in line
+				if lastSymbol != null
+					lastSymbol = results.values[reelI][symbolI]
+				else
+					matched++ if lastSymbol is results.values[reelI][symbolI]
+					lastSymbol = results.values[reelI][symbolI]
+
+			console.log matched
+
+		results
+
 	getSpinResults: (opts)->
 		defer = $.Deferred()
 		results = {}
@@ -93,27 +134,80 @@ class Slots.Calculator
 				results.values[i] = [] unless results.values[i]
 				results.values[i][j] = @spawnValue()
 
+		results = @checkWins results, opts
+
 		setTimeout (-> defer.resolve results), 500
 
 		defer.promise()
 
 class Slots.State
 	constructor: ->
+		@initReels()
+		@initButtons()
+
+	initReels: ->
 		@reels = []
 		
 		for i in [0..4]
 			@reels[i] = new Slots.Reel position: i
 			Slots.stage.addChild @reels[i].container
 
-		@spin()
+		return
 
-	spin: ->
+	initButtons: ->
+		config = Slots.config.buttons
+		image = Slots.loader.getResult('buttons')
+		
+		numFrames = Math.floor(image.width / config.width)
+
+		sheet = new createjs.SpriteSheet
+			images: [image]
+			frames:
+				width: config.width
+				height: config.height
+				count: numFrames
+			animations:
+				static: 0
+				flash:
+					frames: [0 .. numFrames - 1].concat [numFrames - 2 .. 1]
+
+		@spinButton = new createjs.Sprite sheet, 'static'
+		@spinButton.framerate = 30
+		@spinButton.width = config.width
+		@spinButton.height = config.height
+		@spinButton.x = config.x
+		@spinButton.y = config.y
+
+		@spinButton.addEventListener 'mouseover', -> document.body.style.cursor = 'pointer'
+		@spinButton.addEventListener 'mouseout', -> document.body.style.cursor = 'default'
+
+		@spinButton.addEventListener 'click', @spin
+
+		Slots.stage.addChild @spinButton
+
+	spin: =>
+		return if @spinningReelCount > 0
+		
+		@spinningReelCount = 5
+
 		reel.startSpin() for reel in @reels
-		Slots.calculator.getSpinResults().done @handleSpinResults
+		
+		@spinButton.gotoAndPlay 'flash'
+		
+		Slots.calculator.getSpinResults(numLinesBet: 9).done @handleSpinResults
 
 	handleSpinResults: (results)=>
 		for reel, i in @reels
-			reel.completeSpin values: results.values[i]
+			reel.completeSpin(values: results.values[i]).done => @completeSpin results
+
+		return
+
+	completeSpin: (results)->
+		@spinningReelCount--
+		return unless @spinningReelCount is 0
+
+		@spinButton.gotoAndPlay 'static'
+		console.log results
 
 	tick: (evt)=>
 		deltaS = evt.delta / 1000
@@ -157,13 +251,17 @@ class Slots.Reel
 		@isSpinning = true
 		@isFinalPass = false
 		@timeSpinning = 0
+		@defer = $.Deferred()
+
 		@container.filters = [@blurFilter]
 
 
-	completeSpin: (opts)->
+	completeSpin: (opts)->		
 		@values = opts.values.concat Slots.calculator.spawnValue()
 		@timeSpinning = @spinDuration if @timeSpinning > @spinDuration
 		@timeSpinning -= @spinDelay * @position
+
+		@defer.promise()
 
 	update: (deltaS)->
 		return unless @isSpinning
@@ -181,6 +279,7 @@ class Slots.Reel
 				top = 0
 				@isSpinning = false
 				@container.filters = null
+				@defer.resolve()
 		else
 			threshhold = - @container.children[0].height
 
@@ -208,23 +307,23 @@ class Slots.SymbolBuilder
 	config: {}
 
 	constructor: (opts)-> 
-		_.extend @config, Slots.config.symbol, opts
+		_.extend @config, Slots.config.symbols, opts
 		
 		@config.image = @config.image or Slots.loader.getResult('symbols')
 		
 		@config.numSymbols = Math.floor(@config.image.height / @config.height)
-		@config.numFramsPerSymbol = Math.floor(@config.image.width / @config.width)
+		@config.numFramesPerSymbol = Math.floor(@config.image.width / @config.width)
 
 	newSprite: (value = Slots.calculator.spawnValue())->
-		firstFrame = value * @config.numFramsPerSymbol
-		lastFrame = (value + 1) * @config.numFramsPerSymbol - 1
+		firstFrame = value * @config.numFramesPerSymbol
+		lastFrame = (value + 1) * @config.numFramesPerSymbol - 1
 
 		sheet = new createjs.SpriteSheet
 			images: [@config.image]
 			frames:
 				width: @config.width
 				height: @config.height
-				count: @config.numSymbols * @config.numFramsPerSymbol
+				count: @config.numSymbols * @config.numFramesPerSymbol
 			animations:
 				static: firstFrame
 				flash:
@@ -236,6 +335,5 @@ class Slots.SymbolBuilder
 		sprite.height = @config.height
 
 		sprite
-
 
 Slots.load()

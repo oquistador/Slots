@@ -10,7 +10,14 @@
     targetFPS: 60,
     width: 500,
     height: 400,
-    symbol: {
+    buttons: {
+      src: '/images/buttons_sheet.png',
+      width: 100,
+      height: 50,
+      x: 200,
+      y: 325
+    },
+    symbols: {
       src: '/images/symbols_sheet.png',
       width: 100,
       height: 100
@@ -24,50 +31,51 @@
       spinDelay: 0.5,
       speed: 2000
     },
-    calculator: {
-      payouts: [
-        {
-          symbol: 0,
-          probability: 5,
-          wins: [50, 300, 1000]
-        }, {
-          symbol: 1,
-          probability: 10,
-          wins: [40, 200, 750]
-        }, {
-          symbol: 2,
-          probability: 10,
-          wins: [30, 100, 500]
-        }, {
-          symbol: 3,
-          probability: 10,
-          wins: [20, 50, 300]
-        }, {
-          symbol: 4,
-          probability: 30,
-          wins: [10, 40, 200]
-        }, {
-          symbol: 5,
-          probability: 30,
-          wins: [5, 25, 100]
-        }, {
-          symbol: 6,
-          probability: 30,
-          wins: [5, 25, 100]
-        }, {
-          symbol: 7,
-          probability: 30,
-          wins: [5, 25, 100]
-        }, {
-          symbol: 8,
-          probability: 10,
-          wins: [50, 300, 1000]
-        }, {
-          symbol: 9,
-          probability: 5,
-          wins: [400, 1200, 4000]
-        }
-      ]
+    payouts: [
+      {
+        symbol: 0,
+        probability: 5,
+        wins: [50, 300, 1000]
+      }, {
+        symbol: 1,
+        probability: 10,
+        wins: [40, 200, 750]
+      }, {
+        symbol: 2,
+        probability: 10,
+        wins: [30, 100, 500]
+      }, {
+        symbol: 3,
+        probability: 10,
+        wins: [20, 50, 300]
+      }, {
+        symbol: 4,
+        probability: 30,
+        wins: [10, 40, 200]
+      }, {
+        symbol: 5,
+        probability: 30,
+        wins: [5, 25, 100]
+      }, {
+        symbol: 6,
+        probability: 30,
+        wins: [5, 25, 100]
+      }, {
+        symbol: 7,
+        probability: 30,
+        wins: [5, 25, 100]
+      }, {
+        symbol: 8,
+        probability: 10,
+        wins: [50, 300, 1000]
+      }, {
+        symbol: 9,
+        probability: 5,
+        wins: [400, 1200, 4000]
+      }
+    ],
+    lines: {
+      matches: [[1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [0, 0, 0, 0, 0], [2, 1, 0, 1, 2], [0, 1, 2, 1, 0], [1, 2, 2, 2, 1], [1, 0, 0, 0, 1], [2, 2, 1, 0, 0], [0, 0, 1, 2, 2]]
     }
   };
 
@@ -78,10 +86,14 @@
     canvas.height = this.config.height;
     document.body.appendChild(canvas);
     this.stage = new createjs.Stage(canvas);
+    this.stage.enableMouseOver(10);
     manifest = [
       {
         id: 'symbols',
-        src: this.config.symbol.src
+        src: this.config.symbols.src
+      }, {
+        id: 'buttons',
+        src: this.config.buttons.src
       }
     ];
     this.loader = new createjs.LoadQueue(false);
@@ -100,10 +112,11 @@
 
   Slots.Calculator = (function() {
     function Calculator(opts) {
-      var config;
-      config = {};
-      _.extend(config, Slots.config.calculator, opts);
-      this.payouts = config.payouts;
+      if (opts == null) {
+        opts = {};
+      }
+      this.payouts = opts.payouts || Slots.config.payouts;
+      this.lines = opts.lines || Slots.config.lines;
       this.payouts.sort(function(a, b) {
         if (a.probability < b.probability) {
           return 1;
@@ -134,6 +147,36 @@
       return payout.symbol;
     };
 
+    Calculator.prototype.checkWins = function(results, opts) {
+      var i, lastSymbol, line, matched, reelI, symbolI, _i, _j, _len, _len1, _ref;
+      results.winnings = 0;
+      results.flash = [];
+      results.lines = [];
+      results.values = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      _ref = this.lines.matches;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        line = _ref[i];
+        if (i >= opts.numLinesBet) {
+          break;
+        }
+        lastSymbol = null;
+        matched = 1;
+        for (reelI = _j = 0, _len1 = line.length; _j < _len1; reelI = ++_j) {
+          symbolI = line[reelI];
+          if (lastSymbol !== null) {
+            lastSymbol = results.values[reelI][symbolI];
+          } else {
+            if (lastSymbol === results.values[reelI][symbolI]) {
+              matched++;
+            }
+            lastSymbol = results.values[reelI][symbolI];
+          }
+        }
+        console.log(matched);
+      }
+      return results;
+    };
+
     Calculator.prototype.getSpinResults = function(opts) {
       var defer, i, j, results, _i, _j;
       defer = $.Deferred();
@@ -147,6 +190,7 @@
           results.values[i][j] = this.spawnValue();
         }
       }
+      results = this.checkWins(results, opts);
       setTimeout((function() {
         return defer.resolve(results);
       }), 500);
@@ -161,6 +205,12 @@
     function State() {
       this.tick = __bind(this.tick, this);
       this.handleSpinResults = __bind(this.handleSpinResults, this);
+      this.spin = __bind(this.spin, this);
+      this.initReels();
+      this.initButtons();
+    }
+
+    State.prototype.initReels = function() {
       var i, _i;
       this.reels = [];
       for (i = _i = 0; _i <= 4; i = ++_i) {
@@ -169,30 +219,89 @@
         });
         Slots.stage.addChild(this.reels[i].container);
       }
-      this.spin();
-    }
+    };
+
+    State.prototype.initButtons = function() {
+      var config, image, numFrames, sheet, _i, _j, _ref, _ref1, _results, _results1;
+      config = Slots.config.buttons;
+      image = Slots.loader.getResult('buttons');
+      numFrames = Math.floor(image.width / config.width);
+      sheet = new createjs.SpriteSheet({
+        images: [image],
+        frames: {
+          width: config.width,
+          height: config.height,
+          count: numFrames
+        },
+        animations: {
+          "static": 0,
+          flash: {
+            frames: (function() {
+              _results1 = [];
+              for (var _j = 0, _ref1 = numFrames - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; 0 <= _ref1 ? _j++ : _j--){ _results1.push(_j); }
+              return _results1;
+            }).apply(this).concat((function() {
+              _results = [];
+              for (var _i = _ref = numFrames - 2; _ref <= 1 ? _i <= 1 : _i >= 1; _ref <= 1 ? _i++ : _i--){ _results.push(_i); }
+              return _results;
+            }).apply(this))
+          }
+        }
+      });
+      this.spinButton = new createjs.Sprite(sheet, 'static');
+      this.spinButton.framerate = 30;
+      this.spinButton.width = config.width;
+      this.spinButton.height = config.height;
+      this.spinButton.x = config.x;
+      this.spinButton.y = config.y;
+      this.spinButton.addEventListener('mouseover', function() {
+        return document.body.style.cursor = 'pointer';
+      });
+      this.spinButton.addEventListener('mouseout', function() {
+        return document.body.style.cursor = 'default';
+      });
+      this.spinButton.addEventListener('click', this.spin);
+      return Slots.stage.addChild(this.spinButton);
+    };
 
     State.prototype.spin = function() {
       var reel, _i, _len, _ref;
+      if (this.spinningReelCount > 0) {
+        return;
+      }
+      this.spinningReelCount = 5;
       _ref = this.reels;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         reel = _ref[_i];
         reel.startSpin();
       }
-      return Slots.calculator.getSpinResults().done(this.handleSpinResults);
+      this.spinButton.gotoAndPlay('flash');
+      return Slots.calculator.getSpinResults({
+        numLinesBet: 9
+      }).done(this.handleSpinResults);
     };
 
     State.prototype.handleSpinResults = function(results) {
-      var i, reel, _i, _len, _ref, _results;
+      var i, reel, _i, _len, _ref,
+        _this = this;
       _ref = this.reels;
-      _results = [];
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
         reel = _ref[i];
-        _results.push(reel.completeSpin({
+        reel.completeSpin({
           values: results.values[i]
-        }));
+        }).done(function() {
+          return _this.completeSpin(results);
+        });
       }
-      return _results;
+    };
+
+    State.prototype.completeSpin = function(results) {
+      this.spinningReelCount--;
+      if (this.spinningReelCount !== 0) {
+        return;
+      }
+      this.spinButton.gotoAndPlay('static');
+      return console.log(results);
     };
 
     State.prototype.tick = function(evt) {
@@ -239,6 +348,7 @@
       this.isSpinning = true;
       this.isFinalPass = false;
       this.timeSpinning = 0;
+      this.defer = $.Deferred();
       return this.container.filters = [this.blurFilter];
     };
 
@@ -247,7 +357,8 @@
       if (this.timeSpinning > this.spinDuration) {
         this.timeSpinning = this.spinDuration;
       }
-      return this.timeSpinning -= this.spinDelay * this.position;
+      this.timeSpinning -= this.spinDelay * this.position;
+      return this.defer.promise();
     };
 
     Reel.prototype.update = function(deltaS) {
@@ -264,6 +375,7 @@
           top = 0;
           this.isSpinning = false;
           this.container.filters = null;
+          this.defer.resolve();
         }
       } else {
         threshhold = -this.container.children[0].height;
@@ -296,10 +408,10 @@
     SymbolBuilder.prototype.config = {};
 
     function SymbolBuilder(opts) {
-      _.extend(this.config, Slots.config.symbol, opts);
+      _.extend(this.config, Slots.config.symbols, opts);
       this.config.image = this.config.image || Slots.loader.getResult('symbols');
       this.config.numSymbols = Math.floor(this.config.image.height / this.config.height);
-      this.config.numFramsPerSymbol = Math.floor(this.config.image.width / this.config.width);
+      this.config.numFramesPerSymbol = Math.floor(this.config.image.width / this.config.width);
     }
 
     SymbolBuilder.prototype.newSprite = function(value) {
@@ -307,14 +419,14 @@
       if (value == null) {
         value = Slots.calculator.spawnValue();
       }
-      firstFrame = value * this.config.numFramsPerSymbol;
-      lastFrame = (value + 1) * this.config.numFramsPerSymbol - 1;
+      firstFrame = value * this.config.numFramesPerSymbol;
+      lastFrame = (value + 1) * this.config.numFramesPerSymbol - 1;
       sheet = new createjs.SpriteSheet({
         images: [this.config.image],
         frames: {
           width: this.config.width,
           height: this.config.height,
-          count: this.config.numSymbols * this.config.numFramsPerSymbol
+          count: this.config.numSymbols * this.config.numFramesPerSymbol
         },
         animations: {
           "static": firstFrame,
