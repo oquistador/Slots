@@ -102,26 +102,35 @@ class Slots.Calculator
 
 	checkWins: (results, opts)->
 		results.winnings = 0
-		results.flash = []
+		results.flash = {}
 		results.lines = []
 
-		results.values = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+		# results.values = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
 
-		for line, i in @lines.matches
-			break if i >= opts.numLinesBet
+		for line, lineI in @lines.matches
+			break if lineI >= opts.numLinesBet
 			
 			lastSymbol = null
 			matched = 1
-			
+
 			for symbolI, reelI  in line
-				if lastSymbol != null
+				if lastSymbol is null
 					lastSymbol = results.values[reelI][symbolI]
 				else
-					matched++ if lastSymbol is results.values[reelI][symbolI]
-					lastSymbol = results.values[reelI][symbolI]
+					if lastSymbol is results.values[reelI][symbolI]
+						matched++
+						lastSymbol = results.values[reelI][symbolI]
+					else
+						break
 
-			console.log matched
-
+			if matched >= 3
+				results.lines.push lineI
+				
+				for symbolJ, reelJ in line
+					break if reelJ >= matched
+					
+					# results.flash[reel]
+				
 		results
 
 	getSpinResults: (opts)->

@@ -148,31 +148,40 @@
     };
 
     Calculator.prototype.checkWins = function(results, opts) {
-      var i, lastSymbol, line, matched, reelI, symbolI, _i, _j, _len, _len1, _ref;
+      var lastSymbol, line, lineI, matched, reelI, reelJ, symbolI, symbolJ, _i, _j, _k, _len, _len1, _len2, _ref;
       results.winnings = 0;
-      results.flash = [];
+      results.flash = {};
       results.lines = [];
-      results.values = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
       _ref = this.lines.matches;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        line = _ref[i];
-        if (i >= opts.numLinesBet) {
+      for (lineI = _i = 0, _len = _ref.length; _i < _len; lineI = ++_i) {
+        line = _ref[lineI];
+        if (lineI >= opts.numLinesBet) {
           break;
         }
         lastSymbol = null;
         matched = 1;
         for (reelI = _j = 0, _len1 = line.length; _j < _len1; reelI = ++_j) {
           symbolI = line[reelI];
-          if (lastSymbol !== null) {
+          if (lastSymbol === null) {
             lastSymbol = results.values[reelI][symbolI];
           } else {
             if (lastSymbol === results.values[reelI][symbolI]) {
               matched++;
+              lastSymbol = results.values[reelI][symbolI];
+            } else {
+              break;
             }
-            lastSymbol = results.values[reelI][symbolI];
           }
         }
-        console.log(matched);
+        if (matched >= 3) {
+          results.lines.push(lineI);
+          for (reelJ = _k = 0, _len2 = line.length; _k < _len2; reelJ = ++_k) {
+            symbolJ = line[reelJ];
+            if (reelJ >= matched) {
+              break;
+            }
+          }
+        }
       }
       return results;
     };
