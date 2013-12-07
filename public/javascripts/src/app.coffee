@@ -34,18 +34,17 @@ Slots.config =
 		{symbol: 8, probability: 10, wins: [50, 300, 1000]}
 		{symbol: 9, probability: 5, wins: [400, 1200, 4000]}
 	]
-	lines:
-		matches: [
-			[1, 1, 1, 1, 1]
-			[2, 2, 2, 2, 2]
-			[0, 0, 0, 0, 0]
-			[2, 1, 0, 1, 2]
-			[0, 1, 2, 1, 0]
-			[1, 2, 2, 2, 1]
-			[1, 0, 0, 0, 1]
-			[2, 2, 1, 0, 0]
-			[0, 0, 1, 2, 2]
-		]
+	lines: [
+		[1, 1, 1, 1, 1]
+		[2, 2, 2, 2, 2]
+		[0, 0, 0, 0, 0]
+		[2, 1, 0, 1, 2]
+		[0, 1, 2, 1, 0]
+		[1, 2, 2, 2, 1]
+		[1, 0, 0, 0, 1]
+		[2, 2, 1, 0, 0]
+		[0, 0, 1, 2, 2]
+	]
 
 Slots.load = ->
 	canvas = document.createElement 'canvas'
@@ -64,17 +63,18 @@ Slots.load = ->
 	]
 
 	@loader = new createjs.LoadQueue false
-	@loader.addEventListener 'complete', @init
+	@loader.on 'complete', @init
 	@loader.loadManifest manifest
 
 Slots.init = =>
 	Slots.calculator = new Slots.Calculator
 	Slots.symbolBuilder = new Slots.SymbolBuilder
+	Slots.lineBuilder = new Slots.LineBuilder
 	Slots.state = new Slots.State
 
 	createjs.Ticker.timingMod = createjs.Ticker.RAF_SYNCHED
 	createjs.Ticker.setFPS Slots.config.targetFPS
-	createjs.Ticker.addEventListener 'tick', Slots.state.tick
+	createjs.Ticker.on 'tick', Slots.state.tick
 
 class Slots.Calculator
 	constructor: (opts = {})->
@@ -101,35 +101,37 @@ class Slots.Calculator
 		payout.symbol
 
 	checkWins: (results, opts)->
-		results.winnings = 0
-		results.flash = {}
-		results.lines = []
+		results.reward = 0
+		results.wins = []
+		# results.values = [[9,9,9],[9,9,9],[9,9,9],[9,9,9],[9,9,9]]
 
-		# results.values = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
-
-		for line, lineI in @lines.matches
+		for line, lineI in @lines
 			break if lineI >= opts.numLinesBet
-			
-			lastSymbol = null
-			matched = 1
 
-			for symbolI, reelI  in line
-				if lastSymbol is null
-					lastSymbol = results.values[reelI][symbolI]
-				else
-					if lastSymbol is results.values[reelI][symbolI]
-						matched++
-						lastSymbol = results.values[reelI][symbolI]
-					else
-						break
+			matches = []
+			matchValue = results.values[0][line[0]]
+			multiplier = 1
 
-			if matched >= 3
-				results.lines.push lineI
+			for symbolI, reelI in line
+				symbol =
+					value: results.values[reelI][symbolI]
+					position: [reelI, symbolI]
+
+				if symbol.value is matchValue or symbol.value > 7 or matchValue > 7
+					matches.push symbol
+				else 
+					break
+
+				multiplier++ if symbol.value is 9
+				matchValue = symbol.value if symbol.value <= 7
+
+			if matches.length >= 3
+				prize = @payouts.filter((val)-> val.symbol is matchValue)[0].wins[matches.length - 3]
+				prize *= multiplier
 				
-				for symbolJ, reelJ in line
-					break if reelJ >= matched
-					
-					# results.flash[reel]
+				results.reward += prize
+
+				results.wins.push {line: lineI, matches: matches}
 				
 		results
 
@@ -154,12 +156,15 @@ class Slots.State
 		@initReels()
 		@initButtons()
 
+		@lines = []
+		$(document.body).on 'keypress', (evt)=>
+			@spin() if evt.charCode is 32
+
 	initReels: ->
 		@reels = []
 		
 		for i in [0..4]
 			@reels[i] = new Slots.Reel position: i
-			Slots.stage.addChild @reels[i].container
 
 		return
 
@@ -187,15 +192,18 @@ class Slots.State
 		@spinButton.x = config.x
 		@spinButton.y = config.y
 
-		@spinButton.addEventListener 'mouseover', -> document.body.style.cursor = 'pointer'
-		@spinButton.addEventListener 'mouseout', -> document.body.style.cursor = 'default'
+		@spinButton.on 'mouseover', -> document.body.style.cursor = 'pointer'
+		@spinButton.on 'mouseout', -> document.body.style.cursor = 'default'
 
-		@spinButton.addEventListener 'click', @spin
+		@spinButton.on 'click', @spin
 
 		Slots.stage.addChild @spinButton
 
 	spin: =>
 		return if @spinningReelCount > 0
+
+		for line in @lines
+			Slots.stage.removeChild line
 		
 		@spinningReelCount = 5
 
@@ -209,6 +217,7 @@ class Slots.State
 		for reel, i in @reels
 			reel.completeSpin(values: results.values[i]).done => @completeSpin results
 
+		console.log results
 		return
 
 	completeSpin: (results)->
@@ -216,7 +225,23 @@ class Slots.State
 		return unless @spinningReelCount is 0
 
 		@spinButton.gotoAndPlay 'static'
-		console.log results
+		
+		if results.wins.length > 0
+			@lines = []
+			flash = {}
+
+			for win in results.wins
+				for match in win.matches
+					flash[match.position[0]] = {} unless flash[match.position[0]]
+					flash[match.position[0]][match.position[1]] = 1
+
+				line = Slots.lineBuilder.newLine win.line
+				@lines.push line
+				
+				Slots.stage.addChild line
+
+			for reelI, symbols of flash
+				@reels[reelI].flash symbols
 
 	tick: (evt)=>
 		deltaS = evt.delta / 1000
@@ -245,7 +270,12 @@ class Slots.Reel
 		@container.height = config.height
 		@container.name = "reel#{@position}"
 
-		@blurFilter = new createjs.BlurFilter 0, 10, 1
+		mask = new createjs.Shape
+		mask.x = @container.x
+		mask.y = @container.y
+		mask.graphics.drawRect 0, 0, @container.width, @container.height
+
+		@container.mask = mask
 
 		for i in [0..3]
 			symbol = Slots.symbolBuilder.newSprite()
@@ -253,17 +283,21 @@ class Slots.Reel
 
 			@container.addChild symbol
 
-		@container.cache 0, 0, @container.width, @container.height
+		@render()
 
-	startSpin: ()->
+	render: ->
+		Slots.stage.addChild @container
+
+	flash: (symbols)->
+		@container.getChildAt(symbolI).gotoAndPlay('flash') for symbolI of symbols
+		return
+
+	startSpin: ->
 		@values = null
 		@isSpinning = true
 		@isFinalPass = false
 		@timeSpinning = 0
 		@defer = $.Deferred()
-
-		@container.filters = [@blurFilter]
-
 
 	completeSpin: (opts)->		
 		@values = opts.values.concat Slots.calculator.spawnValue()
@@ -287,7 +321,6 @@ class Slots.Reel
 			if top < 0
 				top = 0
 				@isSpinning = false
-				@container.filters = null
 				@defer.resolve()
 		else
 			threshhold = - @container.children[0].height
@@ -309,30 +342,60 @@ class Slots.Reel
 		for symbol, i in @container.children
 			symbol.y = top  + (i * symbol.height)
 
-		@container.updateCache()
+		return
 
+class Slots.LineBuilder
+	constructor: (opts = {})->
+		@graphics = []
+		
+		regX = opts.regX or Slots.config.reel.regX
+		regY = opts.regX or Slots.config.reel.regY
+		width = opts.width or Slots.config.reel.width * 5
+		symbolWidth = opts.symbolWidth or Slots.config.symbols.width
+		symbolHeight = opts.symbolHeight or Slots.config.symbols.height
+		lines = opts.lines or Slots.config.lines
+
+		for line, i in lines
+			graphic = new createjs.Graphics
+			graphic.setStrokeStyle(5).beginStroke "hsl(#{i * 360 / lines.length}, 80%, 50%)"
+			
+			graphic.moveTo 0 + regX, line[0] * symbolHeight + 50 + regY
+			
+			for y, x in line
+				x = x * symbolWidth + 50 + regX
+				y = y * symbolHeight + 50 + regY
+				
+				graphic.lineTo x, y
+
+			graphic.lineTo width, y
+			
+			@graphics.push graphic
+
+	newLine: (ord)->
+		new createjs.Shape @graphics[ord]
 
 class Slots.SymbolBuilder
-	config: {}
-
 	constructor: (opts)-> 
-		_.extend @config, Slots.config.symbols, opts
+		config = {}
+		_.extend config, Slots.config.symbols, opts
 		
-		@config.image = @config.image or Slots.loader.getResult('symbols')
+		@image = config.image or Slots.loader.getResult('symbols')
+		@width = config.width
+		@height = config.height
 		
-		@config.numSymbols = Math.floor(@config.image.height / @config.height)
-		@config.numFramesPerSymbol = Math.floor(@config.image.width / @config.width)
+		@numSymbols = Math.floor(@image.height / @height)
+		@numFramesPerSymbol = Math.floor(@image.width / @width)
 
 	newSprite: (value = Slots.calculator.spawnValue())->
-		firstFrame = value * @config.numFramesPerSymbol
-		lastFrame = (value + 1) * @config.numFramesPerSymbol - 1
+		firstFrame = value * @numFramesPerSymbol
+		lastFrame = (value + 1) * @numFramesPerSymbol - 1
 
 		sheet = new createjs.SpriteSheet
-			images: [@config.image]
+			images: [@image]
 			frames:
-				width: @config.width
-				height: @config.height
-				count: @config.numSymbols * @config.numFramesPerSymbol
+				width: @width
+				height: @height
+				count: @numSymbols * @numFramesPerSymbol
 			animations:
 				static: firstFrame
 				flash:
@@ -340,8 +403,8 @@ class Slots.SymbolBuilder
 
 		sprite = new createjs.Sprite sheet, 'static'
 		sprite.framerate = 30
-		sprite.width = @config.width
-		sprite.height = @config.height
+		sprite.width = @width
+		sprite.height = @height
 
 		sprite
 
