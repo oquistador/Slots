@@ -23,16 +23,16 @@ Slots.config =
 		spinDelay: 0.5
 		speed: 2000
 	payouts: [
-		{symbol: 0, probability: 5, wins: [50, 300, 1000]}
-		{symbol: 1, probability: 10, wins: [40, 200, 750]}
-		{symbol: 2, probability: 10, wins: [30, 100, 500]}
-		{symbol: 3, probability: 10, wins: [20, 50, 300]}
-		{symbol: 4, probability: 30, wins: [10, 40, 200]}
-		{symbol: 5, probability: 30, wins: [5, 25, 100]}
-		{symbol: 6, probability: 30, wins: [5, 25, 100]}
-		{symbol: 7, probability: 30, wins: [5, 25, 100]}
-		{symbol: 8, probability: 10, wins: [50, 300, 1000]}
-		{symbol: 9, probability: 5, wins: [400, 1200, 4000]}
+		{symbol: 0, probability: 5, wins: [30, 125, 400]}
+		{symbol: 1, probability: 5, wins: [20, 100, 300]}
+		{symbol: 2, probability: 5, wins: [15, 75, 200]}
+		{symbol: 3, probability: 5, wins: [10, 50, 150]}
+		{symbol: 4, probability: 5, wins: [5, 20, 100]}
+		{symbol: 5, probability: 5, wins: [5, 20, 100]}
+		{symbol: 6, probability: 5, wins: [5, 20, 100]}
+		{symbol: 7, probability: 5, wins: [5, 20, 100]}
+		{symbol: 8, probability: 1, wins: [40, 200, 750]}
+		{symbol: 9, probability: 1, wins: [50, 300, 1000]}
 	]
 	lines: [
 		[1, 1, 1, 1, 1]
@@ -40,10 +40,31 @@ Slots.config =
 		[0, 0, 0, 0, 0]
 		[2, 1, 0, 1, 2]
 		[0, 1, 2, 1, 0]
+		[0, 0, 1, 0, 0]
+		[2, 2, 1, 2, 2]
 		[1, 2, 2, 2, 1]
 		[1, 0, 0, 0, 1]
-		[2, 2, 1, 0, 0]
+		[0, 1, 1, 1, 0]
+		[2, 1, 1, 1, 2]
+		[0, 1, 0, 1, 0]
+		[2, 1, 2, 1, 2]
+		[1, 0, 1, 0, 1]
+		[1, 2, 1, 2, 1]
+		[1, 1, 0, 1, 1]
+		[1, 1, 2, 1, 1]
+		[0, 2, 0, 2, 0]
+		[2, 0, 2, 0, 2]
+		[1, 0, 2, 0, 1]
+		[1, 2, 0, 2, 1]
+		[0, 0, 2, 0, 0]
+		[2, 2, 0, 2, 2]
+		[0, 2, 2, 2, 0]
+		[2, 0, 0, 0, 2]
+		[0, 2, 1, 2, 0]
+		[2, 0, 1, 0, 2]
 		[0, 0, 1, 2, 2]
+		[2, 2, 1, 0, 0]
+		[1, 0, 1, 2, 1]
 	]
 
 Slots.load = ->
@@ -67,6 +88,8 @@ Slots.load = ->
 	@loader.loadManifest manifest
 
 Slots.init = =>
+	Slots.user = new Slots.User
+	
 	Slots.calculator = new Slots.Calculator
 	Slots.symbolBuilder = new Slots.SymbolBuilder
 	Slots.lineBuilder = new Slots.LineBuilder
@@ -80,7 +103,7 @@ class Slots.Calculator
 	constructor: (opts = {})->
 		@payouts = opts.payouts or Slots.config.payouts
 		@lines = opts.lines or Slots.config.lines
-		
+
 		@payouts.sort (a, b)->
 			return 1 if a.probability < b.probability
 			return -1 if a.probability > b.probability
@@ -105,8 +128,12 @@ class Slots.Calculator
 		results.wins = []
 		# results.values = [[9,9,9],[9,9,9],[9,9,9],[9,9,9],[9,9,9]]
 
+		return results if Slots.user.getCredits() < opts.linesBet * opts.bet
+
+		Slots.user.deductCredits(opts.linesBet * opts.bet)
+
 		for line, lineI in @lines
-			break if lineI >= opts.numLinesBet
+			break if lineI >= opts.linesBet
 
 			matches = []
 			matchValue = results.values[0][line[0]]
@@ -132,6 +159,10 @@ class Slots.Calculator
 				results.reward += prize
 
 				results.wins.push {line: lineI, matches: matches}
+		
+		results.reward *= opts.bet
+
+		Slots.user.addCredits results.reward
 				
 		results
 
@@ -151,12 +182,48 @@ class Slots.Calculator
 
 		defer.promise()
 
+class Slots.User
+	constructor: (opts = {})->
+		@credits = 0
+		
+		if opts.credits
+			@addCredits(opts.credits)
+		else
+			@addCredits 100
+		
+		return
+
+	addCredits: (credits)->
+		return unless typeof credits is 'number'
+		
+		@credits += credits
+		return
+
+	deductCredits: (credits)->
+		return 0 unless typeof credits is 'number'
+
+		if credits > @credits
+			credits = @credits
+			@credits = 0
+		else
+			@credits -= credits
+
+		credits
+
+	getCredits: ->
+		@credits
+
+
 class Slots.State
-	constructor: ->
+	constructor: (opts = {})->
 		@initReels()
 		@initButtons()
 
 		@lines = []
+		@linesBet = 30
+		@totalLines = opts.totalLines or Slots.config.lines.length
+		@bet = 1
+
 		$(document.body).on 'keypress', (evt)=>
 			@spin() if evt.charCode is 32
 
@@ -192,15 +259,36 @@ class Slots.State
 		@spinButton.x = config.x
 		@spinButton.y = config.y
 
-		@spinButton.on 'mouseover', -> document.body.style.cursor = 'pointer'
-		@spinButton.on 'mouseout', -> document.body.style.cursor = 'default'
-
 		@spinButton.on 'click', @spin
 
 		Slots.stage.addChild @spinButton
 
+	incrementLinesBet: ->
+		@linesBet++ if @linesBet < @totalLines
+
+	decrementLinesBet: ->
+		@linesBet-- if @linesBet > 1
+
+	incrementBet: ->
+		@bet++
+
+	decrementBet: ->
+		@bet-- if @bet > 1
+
+	updateCredits: (credits)->
+
 	spin: =>
 		return if @spinningReelCount > 0
+
+		while Slots.user.getCredits() < @linesBet * @bet
+			if @bet > 1
+				@decrementBet()
+			else if @linesBet > 1
+				@decrementLinesBet()
+			else
+				return @openInsufficientCreditsDialog()
+
+		@updateCredits()
 
 		for line in @lines
 			Slots.stage.removeChild line
@@ -211,7 +299,10 @@ class Slots.State
 		
 		@spinButton.gotoAndPlay 'flash'
 		
-		Slots.calculator.getSpinResults(numLinesBet: 9).done @handleSpinResults
+		Slots.calculator.getSpinResults(linesBet: @linesBet, bet: @bet).done @handleSpinResults
+
+	openInsufficientCreditsDialog: ->
+		alert "You're done."
 
 	handleSpinResults: (results)=>
 		for reel, i in @reels
@@ -242,6 +333,11 @@ class Slots.State
 
 			for reelI, symbols of flash
 				@reels[reelI].flash symbols
+
+		@updateCredits()
+
+	updateCredits: ->
+		console.log Slots.user.getCredits()
 
 	tick: (evt)=>
 		deltaS = evt.delta / 1000

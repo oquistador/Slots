@@ -35,46 +35,46 @@
       {
         symbol: 0,
         probability: 5,
-        wins: [50, 300, 1000]
+        wins: [30, 125, 400]
       }, {
         symbol: 1,
-        probability: 10,
-        wins: [40, 200, 750]
+        probability: 5,
+        wins: [20, 100, 300]
       }, {
         symbol: 2,
-        probability: 10,
-        wins: [30, 100, 500]
+        probability: 5,
+        wins: [15, 75, 200]
       }, {
         symbol: 3,
-        probability: 10,
-        wins: [20, 50, 300]
+        probability: 5,
+        wins: [10, 50, 150]
       }, {
         symbol: 4,
-        probability: 30,
-        wins: [10, 40, 200]
+        probability: 5,
+        wins: [5, 20, 100]
       }, {
         symbol: 5,
-        probability: 30,
-        wins: [5, 25, 100]
+        probability: 5,
+        wins: [5, 20, 100]
       }, {
         symbol: 6,
-        probability: 30,
-        wins: [5, 25, 100]
+        probability: 5,
+        wins: [5, 20, 100]
       }, {
         symbol: 7,
-        probability: 30,
-        wins: [5, 25, 100]
+        probability: 5,
+        wins: [5, 20, 100]
       }, {
         symbol: 8,
-        probability: 10,
-        wins: [50, 300, 1000]
+        probability: 1,
+        wins: [40, 200, 750]
       }, {
         symbol: 9,
-        probability: 5,
-        wins: [400, 1200, 4000]
+        probability: 1,
+        wins: [50, 300, 1000]
       }
     ],
-    lines: [[1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [0, 0, 0, 0, 0], [2, 1, 0, 1, 2], [0, 1, 2, 1, 0], [1, 2, 2, 2, 1], [1, 0, 0, 0, 1], [2, 2, 1, 0, 0], [0, 0, 1, 2, 2]]
+    lines: [[1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [0, 0, 0, 0, 0], [2, 1, 0, 1, 2], [0, 1, 2, 1, 0], [0, 0, 1, 0, 0], [2, 2, 1, 2, 2], [1, 2, 2, 2, 1], [1, 0, 0, 0, 1], [0, 1, 1, 1, 0], [2, 1, 1, 1, 2], [0, 1, 0, 1, 0], [2, 1, 2, 1, 2], [1, 0, 1, 0, 1], [1, 2, 1, 2, 1], [1, 1, 0, 1, 1], [1, 1, 2, 1, 1], [0, 2, 0, 2, 0], [2, 0, 2, 0, 2], [1, 0, 2, 0, 1], [1, 2, 0, 2, 1], [0, 0, 2, 0, 0], [2, 2, 0, 2, 2], [0, 2, 2, 2, 0], [2, 0, 0, 0, 2], [0, 2, 1, 2, 0], [2, 0, 1, 0, 2], [0, 0, 1, 2, 2], [2, 2, 1, 0, 0], [1, 0, 1, 2, 1]]
   };
 
   Slots.load = function() {
@@ -100,6 +100,7 @@
   };
 
   Slots.init = function() {
+    Slots.user = new Slots.User;
     Slots.calculator = new Slots.Calculator;
     Slots.symbolBuilder = new Slots.SymbolBuilder;
     Slots.lineBuilder = new Slots.LineBuilder;
@@ -150,10 +151,14 @@
       var line, lineI, matchValue, matches, multiplier, prize, reelI, symbol, symbolI, _i, _j, _len, _len1, _ref;
       results.reward = 0;
       results.wins = [];
+      if (Slots.user.getCredits() < opts.linesBet * opts.bet) {
+        return results;
+      }
+      Slots.user.deductCredits(opts.linesBet * opts.bet);
       _ref = this.lines;
       for (lineI = _i = 0, _len = _ref.length; _i < _len; lineI = ++_i) {
         line = _ref[lineI];
-        if (lineI >= opts.numLinesBet) {
+        if (lineI >= opts.linesBet) {
           break;
         }
         matches = [];
@@ -189,6 +194,8 @@
           });
         }
       }
+      results.reward *= opts.bet;
+      Slots.user.addCredits(results.reward);
       return results;
     };
 
@@ -216,15 +223,63 @@
 
   })();
 
+  Slots.User = (function() {
+    function User(opts) {
+      if (opts == null) {
+        opts = {};
+      }
+      this.credits = 0;
+      if (opts.credits) {
+        this.addCredits(opts.credits);
+      } else {
+        this.addCredits(100);
+      }
+      return;
+    }
+
+    User.prototype.addCredits = function(credits) {
+      if (typeof credits !== 'number') {
+        return;
+      }
+      this.credits += credits;
+    };
+
+    User.prototype.deductCredits = function(credits) {
+      if (typeof credits !== 'number') {
+        return 0;
+      }
+      if (credits > this.credits) {
+        credits = this.credits;
+        this.credits = 0;
+      } else {
+        this.credits -= credits;
+      }
+      return credits;
+    };
+
+    User.prototype.getCredits = function() {
+      return this.credits;
+    };
+
+    return User;
+
+  })();
+
   Slots.State = (function() {
-    function State() {
+    function State(opts) {
+      var _this = this;
+      if (opts == null) {
+        opts = {};
+      }
       this.tick = __bind(this.tick, this);
       this.handleSpinResults = __bind(this.handleSpinResults, this);
       this.spin = __bind(this.spin, this);
-      var _this = this;
       this.initReels();
       this.initButtons();
       this.lines = [];
+      this.linesBet = 30;
+      this.totalLines = opts.totalLines || Slots.config.lines.length;
+      this.bet = 1;
       $(document.body).on('keypress', function(evt) {
         if (evt.charCode === 32) {
           return _this.spin();
@@ -275,21 +330,49 @@
       this.spinButton.height = config.height;
       this.spinButton.x = config.x;
       this.spinButton.y = config.y;
-      this.spinButton.on('mouseover', function() {
-        return document.body.style.cursor = 'pointer';
-      });
-      this.spinButton.on('mouseout', function() {
-        return document.body.style.cursor = 'default';
-      });
       this.spinButton.on('click', this.spin);
       return Slots.stage.addChild(this.spinButton);
     };
+
+    State.prototype.incrementLinesBet = function() {
+      if (this.linesBet < this.totalLines) {
+        return this.linesBet++;
+      }
+    };
+
+    State.prototype.decrementLinesBet = function() {
+      if (this.linesBet > 1) {
+        return this.linesBet--;
+      }
+    };
+
+    State.prototype.incrementBet = function() {
+      return this.bet++;
+    };
+
+    State.prototype.decrementBet = function() {
+      if (this.bet > 1) {
+        return this.bet--;
+      }
+    };
+
+    State.prototype.updateCredits = function(credits) {};
 
     State.prototype.spin = function() {
       var line, reel, _i, _j, _len, _len1, _ref, _ref1;
       if (this.spinningReelCount > 0) {
         return;
       }
+      while (Slots.user.getCredits() < this.linesBet * this.bet) {
+        if (this.bet > 1) {
+          this.decrementBet();
+        } else if (this.linesBet > 1) {
+          this.decrementLinesBet();
+        } else {
+          return this.openInsufficientCreditsDialog();
+        }
+      }
+      this.updateCredits();
       _ref = this.lines;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         line = _ref[_i];
@@ -303,8 +386,13 @@
       }
       this.spinButton.gotoAndPlay('flash');
       return Slots.calculator.getSpinResults({
-        numLinesBet: 9
+        linesBet: this.linesBet,
+        bet: this.bet
       }).done(this.handleSpinResults);
+    };
+
+    State.prototype.openInsufficientCreditsDialog = function() {
+      return alert("You're done.");
     };
 
     State.prototype.handleSpinResults = function(results) {
@@ -323,7 +411,7 @@
     };
 
     State.prototype.completeSpin = function(results) {
-      var flash, line, match, reelI, symbols, win, _i, _j, _len, _len1, _ref, _ref1, _results;
+      var flash, line, match, reelI, symbols, win, _i, _j, _len, _len1, _ref, _ref1;
       this.spinningReelCount--;
       if (this.spinningReelCount !== 0) {
         return;
@@ -347,13 +435,16 @@
           this.lines.push(line);
           Slots.stage.addChild(line);
         }
-        _results = [];
         for (reelI in flash) {
           symbols = flash[reelI];
-          _results.push(this.reels[reelI].flash(symbols));
+          this.reels[reelI].flash(symbols);
         }
-        return _results;
       }
+      return this.updateCredits();
+    };
+
+    State.prototype.updateCredits = function() {
+      return console.log(Slots.user.getCredits());
     };
 
     State.prototype.tick = function(evt) {
