@@ -12,10 +12,81 @@
     height: 400,
     buttons: {
       src: '/images/buttons_sheet.png',
-      width: 100,
-      height: 50,
-      x: 200,
-      y: 325
+      spin: {
+        sheet: {
+          width: 100,
+          height: 50,
+          x: 0,
+          y: 0,
+          frames: 5
+        },
+        position: {
+          x: 200,
+          y: 325
+        }
+      },
+      arrows: {
+        sheets: {
+          up: {
+            width: 15,
+            height: 25,
+            x: 0,
+            y: 75,
+            frames: 5
+          },
+          down: {
+            width: 15,
+            height: 25,
+            x: 0,
+            y: 50,
+            frames: 5
+          }
+        },
+        positions: {
+          decreaseLines: {
+            x: 30,
+            y: 350
+          },
+          increaseLines: {
+            x: 75,
+            y: 350
+          },
+          decreaseBet: {
+            x: 100,
+            y: 350
+          },
+          increaseBet: {
+            x: 145,
+            y: 350
+          }
+        }
+      }
+    },
+    fields: {
+      lines: {
+        font: "15px Helvetica",
+        color: "#000000",
+        x: 60,
+        y: 362
+      },
+      bet: {
+        font: "15px Helvetica",
+        color: "#000000",
+        x: 130,
+        y: 362
+      },
+      win: {
+        font: "15px Helvetica",
+        color: "#000000",
+        x: 370,
+        y: 362
+      },
+      balance: {
+        font: "15px Helvetica",
+        color: "#000000",
+        x: 440,
+        y: 362
+      }
     },
     symbols: {
       src: '/images/symbols_sheet.png',
@@ -274,12 +345,14 @@
       this.tick = __bind(this.tick, this);
       this.handleSpinResults = __bind(this.handleSpinResults, this);
       this.spin = __bind(this.spin, this);
-      this.initReels();
-      this.initButtons();
       this.lines = [];
-      this.linesBet = 30;
       this.totalLines = opts.totalLines || Slots.config.lines.length;
+      this.linesBet = this.totalLines;
       this.bet = 1;
+      this.initReels();
+      this.initSpinButton();
+      this.initFieldButtons();
+      this.initFieldValues();
       $(document.body).on('keypress', function(evt) {
         if (evt.charCode === 32) {
           return _this.spin();
@@ -297,28 +370,27 @@
       }
     };
 
-    State.prototype.initButtons = function() {
-      var config, image, numFrames, sheet, _i, _j, _ref, _ref1, _results, _results1;
-      config = Slots.config.buttons;
+    State.prototype.initSpinButton = function() {
+      var config, image, sheet, _i, _j, _ref, _ref1, _results, _results1;
+      config = Slots.config.buttons.spin;
       image = Slots.loader.getResult('buttons');
-      numFrames = Math.floor(image.width / config.width);
       sheet = new createjs.SpriteSheet({
         images: [image],
         frames: {
-          width: config.width,
-          height: config.height,
-          count: numFrames
+          width: config.sheet.width,
+          height: config.sheet.height,
+          count: config.sheet.frames
         },
         animations: {
           "static": 0,
           flash: {
             frames: (function() {
               _results1 = [];
-              for (var _j = 0, _ref1 = numFrames - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; 0 <= _ref1 ? _j++ : _j--){ _results1.push(_j); }
+              for (var _j = 0, _ref1 = config.sheet.frames - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; 0 <= _ref1 ? _j++ : _j--){ _results1.push(_j); }
               return _results1;
             }).apply(this).concat((function() {
               _results = [];
-              for (var _i = _ref = numFrames - 2; _ref <= 1 ? _i <= 1 : _i >= 1; _ref <= 1 ? _i++ : _i--){ _results.push(_i); }
+              for (var _i = _ref = config.sheet.frames - 2; _ref <= 1 ? _i <= 1 : _i >= 1; _ref <= 1 ? _i++ : _i--){ _results.push(_i); }
               return _results;
             }).apply(this))
           }
@@ -326,37 +398,163 @@
       });
       this.spinButton = new createjs.Sprite(sheet, 'static');
       this.spinButton.framerate = 30;
-      this.spinButton.width = config.width;
-      this.spinButton.height = config.height;
-      this.spinButton.x = config.x;
-      this.spinButton.y = config.y;
+      this.spinButton.width = config.sheet.width;
+      this.spinButton.height = config.sheet.height;
+      this.spinButton.x = config.position.x;
+      this.spinButton.y = config.position.y;
       this.spinButton.on('click', this.spin);
       return Slots.stage.addChild(this.spinButton);
     };
 
-    State.prototype.incrementLinesBet = function() {
-      if (this.linesBet < this.totalLines) {
-        return this.linesBet++;
+    State.prototype.initFieldButtons = function() {
+      var config, downSheet, downSheetFrames, downSprite, frameCount, image, upSheet, upSheetFrames, upSprite, _i, _j, _ref, _ref1,
+        _this = this;
+      config = Slots.config.buttons.arrows;
+      image = Slots.loader.getResult('buttons');
+      downSheetFrames = [];
+      for (frameCount = _i = 0, _ref = config.sheets.down.frames; 0 <= _ref ? _i < _ref : _i > _ref; frameCount = 0 <= _ref ? ++_i : --_i) {
+        downSheetFrames.push([config.sheets.down.x + (frameCount * config.sheets.down.width), config.sheets.down.y, config.sheets.down.width, config.sheets.down.height, 0]);
       }
+      upSheetFrames = [];
+      for (frameCount = _j = 0, _ref1 = config.sheets.up.frames; 0 <= _ref1 ? _j < _ref1 : _j > _ref1; frameCount = 0 <= _ref1 ? ++_j : --_j) {
+        upSheetFrames.push([config.sheets.up.x + (frameCount * config.sheets.up.width), config.sheets.up.y, config.sheets.up.width, config.sheets.up.height, 0]);
+      }
+      downSheet = new createjs.SpriteSheet({
+        images: [image],
+        frames: downSheetFrames,
+        animations: {
+          "default": 0,
+          clicked: [1, config.sheets.down.frames - 1, 'default', 0.5]
+        }
+      });
+      upSheet = new createjs.SpriteSheet({
+        images: [image],
+        frames: upSheetFrames,
+        animations: {
+          "default": 0,
+          clicked: [1, config.sheets.up.frames - 1, 'default', 0.5]
+        }
+      });
+      downSprite = new createjs.Sprite(downSheet, 'default');
+      downSprite.width = config.sheets.down.width;
+      downSprite.height = config.sheets.down.height;
+      upSprite = new createjs.Sprite(upSheet, 'default');
+      upSprite.width = config.sheets.up.width;
+      upSprite.height = config.sheets.up.height;
+      this.decreaseLinesButton = downSprite.clone();
+      _.extend(this.decreaseLinesButton, {
+        x: config.positions.decreaseLines.x,
+        y: config.positions.decreaseLines.y
+      });
+      this.decreaseLinesButton.addEventListener('click', function(evt) {
+        evt.target.gotoAndPlay('clicked');
+        return _this.decrementLines();
+      });
+      this.decreaseBetButton = downSprite.clone();
+      _.extend(this.decreaseBetButton, {
+        x: config.positions.decreaseBet.x,
+        y: config.positions.decreaseBet.y
+      });
+      this.decreaseBetButton.addEventListener('click', function(evt) {
+        evt.target.gotoAndPlay('clicked');
+        return _this.decrementBet();
+      });
+      this.increaseLinesButton = upSprite.clone();
+      _.extend(this.increaseLinesButton, {
+        x: config.positions.increaseLines.x,
+        y: config.positions.increaseLines.y
+      });
+      this.increaseLinesButton.addEventListener('click', function(evt) {
+        evt.target.gotoAndPlay('clicked');
+        return _this.incrementLines();
+      });
+      this.increaseBetButton = upSprite.clone();
+      _.extend(this.increaseBetButton, {
+        x: config.positions.increaseBet.x,
+        y: config.positions.increaseBet.y
+      });
+      this.increaseBetButton.addEventListener('click', function(evt) {
+        evt.target.gotoAndPlay('clicked');
+        return _this.incrementBet();
+      });
+      Slots.stage.addChild(this.decreaseLinesButton);
+      Slots.stage.addChild(this.decreaseBetButton);
+      Slots.stage.addChild(this.increaseLinesButton);
+      return Slots.stage.addChild(this.increaseBetButton);
     };
 
-    State.prototype.decrementLinesBet = function() {
-      if (this.linesBet > 1) {
-        return this.linesBet--;
+    State.prototype.initFieldValues = function() {
+      var attrs, config;
+      config = Slots.config.fields;
+      attrs = {
+        textAlign: 'center',
+        textBaseline: 'middle'
+      };
+      this.linesField = new createjs.Text(this.linesBet, config.lines.font, config.lines.color);
+      _.extend(this.linesField, attrs, {
+        x: config.lines.x,
+        y: config.lines.y
+      });
+      this.betField = new createjs.Text(this.bet, config.bet.font, config.bet.color);
+      _.extend(this.betField, attrs, {
+        x: config.bet.x,
+        y: config.bet.y
+      });
+      this.winField = new createjs.Text(0, config.win.font, config.win.color);
+      _.extend(this.winField, attrs, {
+        x: config.win.x,
+        y: config.win.y
+      });
+      Slots.stage.addChild(this.linesField);
+      Slots.stage.addChild(this.betField);
+      return Slots.stage.addChild(this.winField);
+    };
+
+    State.prototype.incrementLines = function() {
+      if (this.spinningReelCount > 0) {
+        return;
       }
+      if (this.linesBet < this.totalLines) {
+        this.linesBet++;
+      }
+      this.linesField.text = this.linesBet;
+      return Slots.stage.update();
+    };
+
+    State.prototype.decrementLines = function() {
+      if (this.spinningReelCount > 0) {
+        return;
+      }
+      if (this.linesBet > 1) {
+        this.linesBet--;
+      }
+      this.linesField.text = this.linesBet;
+      return Slots.stage.update();
     };
 
     State.prototype.incrementBet = function() {
-      return this.bet++;
+      if (this.spinningReelCount > 0) {
+        return;
+      }
+      this.bet++;
+      this.betField.text = this.bet;
+      return Slots.stage.update();
     };
 
     State.prototype.decrementBet = function() {
-      if (this.bet > 1) {
-        return this.bet--;
+      if (this.spinningReelCount > 0) {
+        return;
       }
+      if (this.bet > 1) {
+        this.bet--;
+      }
+      this.betField.text = this.bet;
+      return Slots.stage.update();
     };
 
-    State.prototype.updateCredits = function(credits) {};
+    State.prototype.updateCredits = function(credits) {
+      return console.log(Slots.user.getCredits());
+    };
 
     State.prototype.spin = function() {
       var line, reel, _i, _j, _len, _len1, _ref, _ref1;
@@ -367,7 +565,7 @@
         if (this.bet > 1) {
           this.decrementBet();
         } else if (this.linesBet > 1) {
-          this.decrementLinesBet();
+          this.decrementLines();
         } else {
           return this.openInsufficientCreditsDialog();
         }
@@ -441,10 +639,6 @@
         }
       }
       return this.updateCredits();
-    };
-
-    State.prototype.updateCredits = function() {
-      return console.log(Slots.user.getCredits());
     };
 
     State.prototype.tick = function(evt) {
@@ -611,7 +805,7 @@
     SymbolBuilder.prototype.newSprite = function(value) {
       var firstFrame, lastFrame, sheet, sprite, _i, _j, _ref, _ref1, _results, _results1;
       if (value == null) {
-        value = Slots.calculator.spawnValue();
+        value = Math.floor(Math.random() * this.numSymbols);
       }
       firstFrame = value * this.numFramesPerSymbol;
       lastFrame = (value + 1) * this.numFramesPerSymbol - 1;

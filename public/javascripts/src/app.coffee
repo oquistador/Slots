@@ -6,10 +6,66 @@ Slots.config =
 	height: 400
 	buttons:
 		src: '/images/buttons_sheet.png'
-		width: 100
-		height: 50
-		x: 200
-		y: 325
+		spin:
+			sheet:
+				width: 100
+				height: 50
+				x: 0
+				y: 0
+				frames: 5			
+			position:
+				x: 200
+				y: 325
+
+		arrows:
+			sheets:
+				up:
+					width: 15
+					height: 25
+					x: 0
+					y: 75
+					frames: 5
+				down:
+					width: 15
+					height: 25
+					x: 0
+					y: 50
+					frames: 5
+			positions:
+				decreaseLines:
+					x: 30
+					y: 350
+				increaseLines:
+					x: 75
+					y: 350
+				decreaseBet:
+					x: 100
+					y: 350
+				increaseBet:
+					x: 145
+					y: 350
+	fields:
+		lines:
+			font: "15px Helvetica"
+			color: "#000000"
+			x: 60
+			y: 362
+		bet:
+			font: "15px Helvetica"
+			color: "#000000"
+			x: 130
+			y: 362
+		win: 
+			font: "15px Helvetica"
+			color: "#000000"
+			x: 370
+			y: 362
+		balance: 
+			font: "15px Helvetica"
+			color: "#000000"
+			x: 440
+			y: 362
+
 	symbols: 
 		src: '/images/symbols_sheet.png'
 		width: 100
@@ -216,13 +272,15 @@ class Slots.User
 
 class Slots.State
 	constructor: (opts = {})->
-		@initReels()
-		@initButtons()
-
 		@lines = []
-		@linesBet = 30
 		@totalLines = opts.totalLines or Slots.config.lines.length
+		@linesBet = @totalLines
 		@bet = 1
+
+		@initReels()
+		@initSpinButton()
+		@initFieldButtons()
+		@initFieldValues()
 
 		$(document.body).on 'keypress', (evt)=>
 			@spin() if evt.charCode is 32
@@ -235,47 +293,140 @@ class Slots.State
 
 		return
 
-	initButtons: ->
-		config = Slots.config.buttons
+	initSpinButton: ->
+		config = Slots.config.buttons.spin
 		image = Slots.loader.getResult('buttons')
 		
-		numFrames = Math.floor(image.width / config.width)
-
 		sheet = new createjs.SpriteSheet
 			images: [image]
 			frames:
-				width: config.width
-				height: config.height
-				count: numFrames
+				width: config.sheet.width
+				height: config.sheet.height
+				count: config.sheet.frames
 			animations:
 				static: 0
 				flash:
-					frames: [0 .. numFrames - 1].concat [numFrames - 2 .. 1]
+					frames: [0 .. config.sheet.frames - 1].concat [config.sheet.frames - 2 .. 1]
 
 		@spinButton = new createjs.Sprite sheet, 'static'
 		@spinButton.framerate = 30
-		@spinButton.width = config.width
-		@spinButton.height = config.height
-		@spinButton.x = config.x
-		@spinButton.y = config.y
+		@spinButton.width = config.sheet.width
+		@spinButton.height = config.sheet.height
+		@spinButton.x = config.position.x
+		@spinButton.y = config.position.y
 
 		@spinButton.on 'click', @spin
 
 		Slots.stage.addChild @spinButton
 
-	incrementLinesBet: ->
-		@linesBet++ if @linesBet < @totalLines
+	initFieldButtons: ->
+		config = Slots.config.buttons.arrows
+		image = Slots.loader.getResult('buttons')
 
-	decrementLinesBet: ->
+		downSheetFrames = []
+		for frameCount in [0...config.sheets.down.frames]
+			downSheetFrames.push [config.sheets.down.x + (frameCount * config.sheets.down.width), config.sheets.down.y, config.sheets.down.width, config.sheets.down.height, 0]
+
+		upSheetFrames = []
+		for frameCount in [0...config.sheets.up.frames]
+			upSheetFrames.push [config.sheets.up.x + (frameCount * config.sheets.up.width), config.sheets.up.y, config.sheets.up.width, config.sheets.up.height, 0]
+
+		downSheet = new createjs.SpriteSheet
+			images: [image]
+			frames: downSheetFrames
+			animations:
+				default: 0
+				clicked: [1, config.sheets.down.frames - 1, 'default', 0.5]
+
+		upSheet = new createjs.SpriteSheet
+			images: [image]
+			frames: upSheetFrames
+			animations:
+				default: 0
+				clicked: [1, config.sheets.up.frames - 1, 'default', 0.5]
+
+		downSprite = new createjs.Sprite downSheet, 'default'
+		downSprite.width = config.sheets.down.width
+		downSprite.height = config.sheets.down.height
+
+		upSprite = new createjs.Sprite upSheet, 'default'
+		upSprite.width = config.sheets.up.width
+		upSprite.height = config.sheets.up.height
+
+		@decreaseLinesButton = downSprite.clone()
+		_.extend @decreaseLinesButton, {x: config.positions.decreaseLines.x, y: config.positions.decreaseLines.y}
+		@decreaseLinesButton.addEventListener 'click', (evt)=>
+			evt.target.gotoAndPlay 'clicked'
+			@decrementLines()
+
+		@decreaseBetButton = downSprite.clone()
+		_.extend @decreaseBetButton, {x: config.positions.decreaseBet.x, y: config.positions.decreaseBet.y}
+		@decreaseBetButton.addEventListener 'click', (evt)=>
+			evt.target.gotoAndPlay 'clicked'
+			@decrementBet()
+
+		@increaseLinesButton = upSprite.clone()
+		_.extend @increaseLinesButton, {x: config.positions.increaseLines.x, y: config.positions.increaseLines.y}
+		@increaseLinesButton.addEventListener 'click', (evt)=>
+			evt.target.gotoAndPlay 'clicked'
+			@incrementLines()
+
+		@increaseBetButton = upSprite.clone()
+		_.extend @increaseBetButton, {x: config.positions.increaseBet.x, y: config.positions.increaseBet.y}
+		@increaseBetButton.addEventListener 'click', (evt)=>
+			evt.target.gotoAndPlay 'clicked'
+			@incrementBet()
+
+		Slots.stage.addChild @decreaseLinesButton
+		Slots.stage.addChild @decreaseBetButton
+		Slots.stage.addChild @increaseLinesButton
+		Slots.stage.addChild @increaseBetButton
+
+	initFieldValues: ->
+		config = Slots.config.fields
+		attrs = 
+			textAlign: 'center'
+			textBaseline: 'middle'
+
+		@linesField = new createjs.Text @linesBet, config.lines.font, config.lines.color
+		_.extend @linesField, attrs, {x: config.lines.x, y: config.lines.y}		
+
+		@betField = new createjs.Text @bet, config.bet.font, config.bet.color
+		_.extend @betField, attrs, {x: config.bet.x, y: config.bet.y}
+
+		@winField = new createjs.Text 0, config.win.font, config.win.color
+		_.extend @winField, attrs, {x: config.win.x, y: config.win.y}
+		
+		Slots.stage.addChild @linesField
+		Slots.stage.addChild @betField
+		Slots.stage.addChild @winField
+
+	incrementLines: ->
+		return if @spinningReelCount > 0
+		@linesBet++ if @linesBet < @totalLines
+		@linesField.text = @linesBet
+		Slots.stage.update()
+
+	decrementLines: ->
+		return if @spinningReelCount > 0
 		@linesBet-- if @linesBet > 1
+		@linesField.text = @linesBet
+		Slots.stage.update()
 
 	incrementBet: ->
+		return if @spinningReelCount > 0
 		@bet++
+		@betField.text = @bet
+		Slots.stage.update()
 
 	decrementBet: ->
+		return if @spinningReelCount > 0
 		@bet-- if @bet > 1
+		@betField.text = @bet
+		Slots.stage.update()
 
 	updateCredits: (credits)->
+		console.log Slots.user.getCredits()
 
 	spin: =>
 		return if @spinningReelCount > 0
@@ -284,7 +435,7 @@ class Slots.State
 			if @bet > 1
 				@decrementBet()
 			else if @linesBet > 1
-				@decrementLinesBet()
+				@decrementLines()
 			else
 				return @openInsufficientCreditsDialog()
 
@@ -335,9 +486,6 @@ class Slots.State
 				@reels[reelI].flash symbols
 
 		@updateCredits()
-
-	updateCredits: ->
-		console.log Slots.user.getCredits()
 
 	tick: (evt)=>
 		deltaS = evt.delta / 1000
@@ -482,7 +630,9 @@ class Slots.SymbolBuilder
 		@numSymbols = Math.floor(@image.height / @height)
 		@numFramesPerSymbol = Math.floor(@image.width / @width)
 
-	newSprite: (value = Slots.calculator.spawnValue())->
+	newSprite: (value)->
+		value ?= Math.floor(Math.random() * @numSymbols)
+
 		firstFrame = value * @numFramesPerSymbol
 		lastFrame = (value + 1) * @numFramesPerSymbol - 1
 
