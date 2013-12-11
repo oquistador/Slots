@@ -4,6 +4,7 @@ Slots.config =
 	targetFPS: 60
 	width: 500
 	height: 400
+	background: '/images/bg.png'
 	buttons:
 		src: '/images/buttons_sheet.png'
 		spin:
@@ -14,7 +15,7 @@ Slots.config =
 				y: 0
 				frames: 5			
 			position:
-				x: 200
+				x: 215
 				y: 325
 
 		arrows:
@@ -33,38 +34,43 @@ Slots.config =
 					frames: 5
 			positions:
 				decreaseLines:
-					x: 30
-					y: 350
+					x: 10
+					y: 338
 				increaseLines:
-					x: 75
-					y: 350
+					x: 50
+					y: 338
 				decreaseBet:
-					x: 100
-					y: 350
+					x: 75
+					y: 338
 				increaseBet:
-					x: 145
-					y: 350
+					x: 115
+					y: 338
 	fields:
 		lines:
-			font: "15px Helvetica"
+			font: "12px Helvetica"
 			color: "#000000"
-			x: 60
-			y: 362
+			x: 37
+			y: 350
 		bet:
-			font: "15px Helvetica"
+			font: "12px Helvetica"
 			color: "#000000"
-			x: 130
-			y: 362
+			x: 102
+			y: 350
+		totalBet:
+			font: "12px Helvetica"
+			color: "#000000"
+			x: 172
+			y: 350
 		win: 
-			font: "15px Helvetica"
+			font: "12px Helvetica"
 			color: "#000000"
-			x: 370
-			y: 362
+			x: 360
+			y: 350
 		balance: 
-			font: "15px Helvetica"
+			font: "12px Helvetica"
 			color: "#000000"
-			x: 440
-			y: 362
+			x: 448
+			y: 350
 
 	symbols: 
 		src: '/images/symbols_sheet.png'
@@ -135,6 +141,7 @@ Slots.load = ->
 	@stage.enableMouseOver 10
 	
 	manifest = [
+		{id: 'bg', src: @config.background}
 		{id: 'symbols', src: @config.symbols.src}
 		{id: 'buttons', src: @config.buttons.src}
 	]
@@ -269,7 +276,6 @@ class Slots.User
 	getCredits: ->
 		@credits
 
-
 class Slots.State
 	constructor: (opts = {})->
 		@lines = []
@@ -277,6 +283,7 @@ class Slots.State
 		@linesBet = @totalLines
 		@bet = 1
 
+		@initBG()
 		@initReels()
 		@initSpinButton()
 		@initFieldButtons()
@@ -284,6 +291,11 @@ class Slots.State
 
 		$(document.body).on 'keypress', (evt)=>
 			@spin() if evt.charCode is 32
+
+	initBG: ->
+		bg = new createjs.Shape();
+		bg.graphics.beginBitmapFill(Slots.loader.getResult("bg")).drawRect(0, 0, Slots.config.width, Slots.config.height)
+		Slots.stage.addChild bg
 
 	initReels: ->
 		@reels = []
@@ -394,39 +406,56 @@ class Slots.State
 		@betField = new createjs.Text @bet, config.bet.font, config.bet.color
 		_.extend @betField, attrs, {x: config.bet.x, y: config.bet.y}
 
+		@totalBetField = new createjs.Text @linesBet * @bet, config.lines.font, config.totalBet.color
+		_.extend @totalBetField, attrs, {x: config.totalBet.x, y: config.totalBet.y}
+
 		@winField = new createjs.Text 0, config.win.font, config.win.color
 		_.extend @winField, attrs, {x: config.win.x, y: config.win.y}
+
+		@balanceField = new createjs.Text Slots.user.getCredits(), config.balance.font, config.balance.color
+		_.extend @balanceField, attrs, {x: config.balance.x, y: config.balance.y}
 		
 		Slots.stage.addChild @linesField
 		Slots.stage.addChild @betField
+		Slots.stage.addChild @totalBetField
 		Slots.stage.addChild @winField
+		Slots.stage.addChild @balanceField
 
 	incrementLines: ->
 		return if @spinningReelCount > 0
 		@linesBet++ if @linesBet < @totalLines
 		@linesField.text = @linesBet
+		@totalBetField.text = @linesBet * @bet
 		Slots.stage.update()
 
 	decrementLines: ->
 		return if @spinningReelCount > 0
 		@linesBet-- if @linesBet > 1
 		@linesField.text = @linesBet
+		@totalBetField.text = @linesBet * @bet
 		Slots.stage.update()
 
 	incrementBet: ->
 		return if @spinningReelCount > 0
 		@bet++
 		@betField.text = @bet
+		@totalBetField.text = @linesBet * @bet
 		Slots.stage.update()
 
 	decrementBet: ->
 		return if @spinningReelCount > 0
 		@bet-- if @bet > 1
 		@betField.text = @bet
+		@totalBetField.text = @linesBet * @bet
+		Slots.stage.update()
+
+	updateWin: (win)->
+		@winField.text = win
 		Slots.stage.update()
 
 	updateCredits: (credits)->
-		console.log Slots.user.getCredits()
+		@balanceField.text = Slots.user.getCredits()
+		Slots.stage.update()
 
 	spin: =>
 		return if @spinningReelCount > 0
@@ -484,7 +513,8 @@ class Slots.State
 
 			for reelI, symbols of flash
 				@reels[reelI].flash symbols
-
+		
+		@updateWin results.reward
 		@updateCredits()
 
 	tick: (evt)=>
