@@ -488,7 +488,6 @@ class Slots.State
 		for reel, i in @reels
 			reel.completeSpin(values: results.values[i]).done => @completeSpin results
 
-		console.log results
 		return
 
 	completeSpin: (results)->
