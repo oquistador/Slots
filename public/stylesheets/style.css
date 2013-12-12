@@ -6,17 +6,63 @@ html, body {
 
 body {
 	font: 12px Helvetica, Arial, sans-serif;
-	padding: 0;
+	padding: 40px;
 	margin: 0;
 }
 
 canvas {
 	position: fixed;
-	top: 50%;
 	left: 50%;
-	margin: -200px 0 0 -250px;
+	margin: 0 0 0 -250px;
 }
 
 a {
-  color: #00B7FF;
+  color: #999;
+  text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+h1 {
+	text-align: center;
+}
+
+form {
+	width: 280px;
+	position: absolute;
+	left: 50%;
+	margin: 0 0 0 -140px;
+	border: 2px solid #000;
+	box-size: border-box;
+	padding: 20px;
+}
+
+form .row {
+	margin-bottom: 1em;
+	text-align: right;
+}
+
+form .row:last-of-type {
+	margin-bottom: 0;
+}
+
+form label {
+	display: inline-block;
+	margin-right: 1em;
+	font-weight: bold;
+}
+
+form input {
+	border: 2px solid #000;
+	line-height: 2em;
+	width: 200px;
+}
+
+form button {
+	background: #fff;
+	border: 2px solid #000;
+	line-height: 2em;
+	font-weight: bold;
 }

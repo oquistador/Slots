@@ -1,3 +1,14 @@
 extends layout
 
 block content
+	if user !== null
+		script(src='/javascripts/vendor/createjs-2013.09.25.min.js')
+		script(src='/javascripts/vendor/underscore-min.js')
+		script(src='/javascripts/vendor/jquery-2.0.3.min.js')
+		script(src='/javascripts/app.js')
+	else
+		h1
+			a(href='/login') Log in
+			|	or 
+			a(href='/signup') sign up
+			|.
