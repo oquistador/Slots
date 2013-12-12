@@ -1,0 +1,12 @@
+extends layout
+
+block content
+	form(action='/login', method='POST')
+		.row
+			label(for='email') Email:
+			input#email(type='text', name='email')
+		.row
+			label(for='password') Password:
+			input#password(type='password', name='password')
+		.row
+			button(type='submit') Log in
