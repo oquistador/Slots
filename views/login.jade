@@ -4,9 +4,9 @@ block content
 	form(action='/login', method='POST')
 		.row
 			label(for='email') Email:
-			input#email(type='text', name='email')
+			input#email(type='email', name='email', required)
 		.row
 			label(for='password') Password:
-			input#password(type='password', name='password')
+			input#password(type='password', name='password', required)
 		.row
 			button(type='submit') Log in
