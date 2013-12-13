@@ -60,6 +60,8 @@ UserSchema.methods.addCredits = function(credits, done) {
 };
 
 UserSchema.methods.spin = function(lines, bet, done) {
+	var config = require('./config');
+
 	console.log('Spinning with lines: ', lines, ', bet: ', bet);
 };
 
