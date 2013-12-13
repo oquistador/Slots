@@ -8,12 +8,11 @@ body {
 	font: 12px Helvetica, Arial, sans-serif;
 	padding: 40px;
 	margin: 0;
+	text-align: center;
 }
 
 canvas {
-	position: fixed;
-	left: 50%;
-	margin: 0 0 0 -250px;
+	display: inline-block;
 }
 
 a {
@@ -30,13 +29,13 @@ h1 {
 }
 
 form {
+	display: inline-block;
 	width: 280px;
-	position: absolute;
-	left: 50%;
-	margin: 0 0 0 -140px;
+	margin: 20px;
 	border: 2px solid #000;
 	box-size: border-box;
 	padding: 20px;
+	vertical-align: top;
 }
 
 form .row {
