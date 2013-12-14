@@ -1,5 +1,7 @@
 var mongoose = require('mongoose');
 var hash = require('./hash');
+var spin = require('./spin');
+var config = require('./config');
 
 UserSchema = mongoose.Schema({
 	email: {
@@ -48,22 +50,44 @@ UserSchema.statics.isValidUserPassword = function(email, password, done) {
 	});
 };
 
-UserSchema.methods.addCredits = function(credits, done) {
-	credits = parseInt(credits);
+UserSchema.methods.addCredits = function(req, res, next) {
+	var user = this,
+		credits = parseInt(req.body.credits);
 	
 	if (isNaN(credits) || credits < 0) {
-		return done({message: 'Invalid value'});
+		return res.json(412, {message: 'Invalid value'});
 	}
 
-	this.credits += credits;
-	this.save(done);
+	user.credits += credits;
+	user.save(function(err) {
+		if (err) return next(err);
+
+		res.json({credits: user.credits});
+	});
 };
 
-UserSchema.methods.spin = function(lines, bet, done) {
-	var config = require('./config');
+UserSchema.methods.spin = function(req, res, next) {
+	var user = this,
+		lines = parseInt(req.body.lines),
+		bet = parseInt(req.body.bet),
+		totalBet = lines * bet,
+		results;
 
-	console.log('Spinning with lines: ', lines, ', bet: ', bet);
+	if (user.credits < lines * bet) {
+		return res.json(412, {message: 'Insufficient funds'});
+	}
+
+	results = spin({lines: lines, bet: bet});
+
+	user.credits += results.reward - totalBet;
+
+	user.save(function(err) {
+		if (err) return next(err);
+		
+		results.credits = user.credits;
+		res.json(results);
+	});
+
 };
 
-var User = mongoose.model("User", UserSchema);
-module.exports = User;
+module.exports = mongoose.model("User", UserSchema);
