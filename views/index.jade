@@ -2,6 +2,12 @@ extends layout
 
 block content
 	if user !== null
+		canvas
+		p
+			span
+				a(href='/logout') Log out
+			span
+				a#request-credits Get more credits
 		script(src='/javascripts/vendor/createjs-2013.09.25.min.js')
 		script(src='/javascripts/vendor/underscore-min.js')
 		script(src='/javascripts/vendor/jquery-2.0.3.min.js')

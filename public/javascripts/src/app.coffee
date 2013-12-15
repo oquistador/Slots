@@ -4,16 +4,12 @@ Slots.load = ->
 	$.ajax('/api/config').done (config)=>
 		@config = config
 
-		canvas = document.createElement 'canvas'
-		canvas.width = @config.width
-		canvas.height = @config.height
+		$canvas = $('canvas')
+		$canvas.attr width: @config.width, height: @config.height
+		$canvas.on 'mousedown', -> false
 
-		document.body.appendChild canvas
+		@stage = new createjs.Stage $canvas[0]
 
-		@stage = new createjs.Stage canvas
-
-		@stage.enableMouseOver 10
-		
 		manifest = [
 			{id: 'bg', src: @config.background}
 			{id: 'symbols', src: @config.symbols.src}
@@ -60,6 +56,7 @@ class Slots.State
 		@initSpinButton()
 		@initFieldButtons()
 		@initFieldValues()
+		@initReqCredits()
 
 		$(document.body).on 'keypress', (evt)=>
 			@spin() if evt.charCode is 32
@@ -193,6 +190,12 @@ class Slots.State
 		Slots.stage.addChild @winField
 		Slots.stage.addChild @balanceField
 
+	initReqCredits: ->
+		$('#request-credits').on 'click', (ev)=>
+			ev.preventDefault()
+			@updateCredits 100, true
+
+
 	incrementLines: ->
 		return if @spinningReelCount > 0
 		@linesBet++ if @linesBet < @totalLines
@@ -225,8 +228,10 @@ class Slots.State
 		@winField.text = win
 		Slots.stage.update()
 
-	updateCredits: (addCredits = 0)->
+	updateCredits: (addCredits = 0, save)->
 		credits = Slots.user.get('credits') + addCredits
+		Slots.user.set('credits', credits).save() if save
+		
 		@balanceField.text = credits
 		Slots.stage.update()
 

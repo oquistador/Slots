@@ -50,15 +50,15 @@ UserSchema.statics.isValidUserPassword = function(email, password, done) {
 	});
 };
 
-UserSchema.methods.addCredits = function(req, res, next) {
+UserSchema.methods.update = function(req, res, next) {
 	var user = this,
 		credits = parseInt(req.body.credits);
 	
-	if (isNaN(credits) || credits < 0) {
+	if (isNaN(credits)) {
 		return res.json(412, {message: 'Invalid value'});
 	}
 
-	user.credits += credits;
+	user.credits = credits;
 	user.save(function(err) {
 		if (err) return next(err);
 

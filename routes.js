@@ -49,14 +49,14 @@ module.exports = function(app, passport) {
 		res.json({email: req.user.email, credits: req.user.credits});
 	});
 
+	app.put('/api/users/:id', function(req, res, next) {
+		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
+		req.user.update(req, res, next);
+	});
+
 	app.post('/api/users/:id/spin', function(req, res, next) {
 		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
 		req.user.spin(req, res, next);
-	});
-
-	app.post('/api/users/:id/add_credits', function(req, res, next) {
-		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
-		req.user.addCredits(req, res, next);
 	});
 
 	app.get('/api/config', function(req, res, next) {

@@ -12,15 +12,18 @@
     var _this = this;
 
     return $.ajax('/api/config').done(function(config) {
-      var canvas, manifest;
+      var $canvas, manifest;
 
       _this.config = config;
-      canvas = document.createElement('canvas');
-      canvas.width = _this.config.width;
-      canvas.height = _this.config.height;
-      document.body.appendChild(canvas);
-      _this.stage = new createjs.Stage(canvas);
-      _this.stage.enableMouseOver(10);
+      $canvas = $('canvas');
+      $canvas.attr({
+        width: _this.config.width,
+        height: _this.config.height
+      });
+      $canvas.on('mousedown', function() {
+        return false;
+      });
+      _this.stage = new createjs.Stage($canvas[0]);
       manifest = [
         {
           id: 'bg',
@@ -96,6 +99,7 @@
       this.initSpinButton();
       this.initFieldButtons();
       this.initFieldValues();
+      this.initReqCredits();
       $(document.body).on('keypress', function(evt) {
         if (evt.charCode === 32) {
           return _this.spin();
@@ -277,6 +281,15 @@
       return Slots.stage.addChild(this.balanceField);
     };
 
+    State.prototype.initReqCredits = function() {
+      var _this = this;
+
+      return $('#request-credits').on('click', function(ev) {
+        ev.preventDefault();
+        return _this.updateCredits(100, true);
+      });
+    };
+
     State.prototype.incrementLines = function() {
       if (this.spinningReelCount > 0) {
         return;
@@ -328,13 +341,16 @@
       return Slots.stage.update();
     };
 
-    State.prototype.updateCredits = function(addCredits) {
+    State.prototype.updateCredits = function(addCredits, save) {
       var credits;
 
       if (addCredits == null) {
         addCredits = 0;
       }
       credits = Slots.user.get('credits') + addCredits;
+      if (save) {
+        Slots.user.set('credits', credits).save();
+      }
       this.balanceField.text = credits;
       return Slots.stage.update();
     };

@@ -5,11 +5,13 @@ body {
 }
 
 canvas {
+	margin: 20px;
 	display: inline-block;
 }
 
 a {
   color: #999;
+  cursor: pointer;
   text-decoration: none;
 }
 
@@ -19,6 +21,22 @@ a:hover {
 
 h1 {
 	text-align: center;
+}
+
+p {
+	margin: 0;
+	display: inline-block;
+	width: 500px;
+}
+
+p span {
+	width: 50%;
+	display: inline-block;
+	text-align: left;
+}
+
+p span:last-of-type {
+	text-align: right;
 }
 
 form {
