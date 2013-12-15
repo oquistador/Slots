@@ -44,6 +44,11 @@ module.exports = function(app, passport) {
 		}
 	});
 
+	app.get('/api/users/:id', function(req, res, next) {
+		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
+		res.json({email: req.user.email, credits: req.user.credits});
+	});
+
 	app.post('/api/users/:id/spin', function(req, res, next) {
 		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
 		req.user.spin(req, res, next);
@@ -54,8 +59,9 @@ module.exports = function(app, passport) {
 		req.user.addCredits(req, res, next);
 	});
 
-	app.get('/api/configs', function(req, res, next) {
+	app.get('/api/config', function(req, res, next) {
 		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
+		config.user = {id: req.user.id, email: req.user.email, credits: req.user.credits}
 		res.json(config);
 	});
 };

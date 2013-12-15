@@ -1,280 +1,52 @@
 Slots = {}
 
-Slots.config = 
-	targetFPS: 60
-	width: 500
-	height: 400
-	background: '/images/bg.png'
-	buttons:
-		src: '/images/buttons_sheet.png'
-		spin:
-			sheet:
-				width: 100
-				height: 50
-				x: 0
-				y: 0
-				frames: 5			
-			position:
-				x: 215
-				y: 325
-
-		arrows:
-			sheets:
-				up:
-					width: 15
-					height: 25
-					x: 0
-					y: 75
-					frames: 5
-				down:
-					width: 15
-					height: 25
-					x: 0
-					y: 50
-					frames: 5
-			positions:
-				decreaseLines:
-					x: 10
-					y: 338
-				increaseLines:
-					x: 50
-					y: 338
-				decreaseBet:
-					x: 75
-					y: 338
-				increaseBet:
-					x: 115
-					y: 338
-	fields:
-		lines:
-			font: "12px Helvetica"
-			color: "#000000"
-			x: 37
-			y: 350
-		bet:
-			font: "12px Helvetica"
-			color: "#000000"
-			x: 102
-			y: 350
-		totalBet:
-			font: "12px Helvetica"
-			color: "#000000"
-			x: 172
-			y: 350
-		win: 
-			font: "12px Helvetica"
-			color: "#000000"
-			x: 360
-			y: 350
-		balance: 
-			font: "12px Helvetica"
-			color: "#000000"
-			x: 448
-			y: 350
-
-	symbols: 
-		src: '/images/symbols_sheet.png'
-		width: 100
-		height: 100
-	reel:
-		width: 100
-		height: 300
-		regX: 0
-		regY: 0
-		spinDuration: 0.4
-		spinDelay: 0.5
-		speed: 2000
-	payouts: [
-		{symbol: 0, probability: 5, wins: [30, 125, 400]}
-		{symbol: 1, probability: 5, wins: [20, 100, 300]}
-		{symbol: 2, probability: 5, wins: [15, 75, 200]}
-		{symbol: 3, probability: 5, wins: [10, 50, 150]}
-		{symbol: 4, probability: 5, wins: [5, 20, 100]}
-		{symbol: 5, probability: 5, wins: [5, 20, 100]}
-		{symbol: 6, probability: 5, wins: [5, 20, 100]}
-		{symbol: 7, probability: 5, wins: [5, 20, 100]}
-		{symbol: 8, probability: 1, wins: [40, 200, 750]}
-		{symbol: 9, probability: 1, wins: [50, 300, 1000]}
-	]
-	lines: [
-		[1, 1, 1, 1, 1]
-		[2, 2, 2, 2, 2]
-		[0, 0, 0, 0, 0]
-		[2, 1, 0, 1, 2]
-		[0, 1, 2, 1, 0]
-		[0, 0, 1, 0, 0]
-		[2, 2, 1, 2, 2]
-		[1, 2, 2, 2, 1]
-		[1, 0, 0, 0, 1]
-		[0, 1, 1, 1, 0]
-		[2, 1, 1, 1, 2]
-		[0, 1, 0, 1, 0]
-		[2, 1, 2, 1, 2]
-		[1, 0, 1, 0, 1]
-		[1, 2, 1, 2, 1]
-		[1, 1, 0, 1, 1]
-		[1, 1, 2, 1, 1]
-		[0, 2, 0, 2, 0]
-		[2, 0, 2, 0, 2]
-		[1, 0, 2, 0, 1]
-		[1, 2, 0, 2, 1]
-		[0, 0, 2, 0, 0]
-		[2, 2, 0, 2, 2]
-		[0, 2, 2, 2, 0]
-		[2, 0, 0, 0, 2]
-		[0, 2, 1, 2, 0]
-		[2, 0, 1, 0, 2]
-		[0, 0, 1, 2, 2]
-		[2, 2, 1, 0, 0]
-		[1, 0, 1, 2, 1]
-	]
-
 Slots.load = ->
-	canvas = document.createElement 'canvas'
-	canvas.width = @config.width
-	canvas.height = @config.height
+	$.ajax('/api/config').done (config)=>
+		@config = config
 
-	document.body.appendChild canvas
+		canvas = document.createElement 'canvas'
+		canvas.width = @config.width
+		canvas.height = @config.height
 
-	@stage = new createjs.Stage canvas
+		document.body.appendChild canvas
 
-	@stage.enableMouseOver 10
-	
-	manifest = [
-		{id: 'bg', src: @config.background}
-		{id: 'symbols', src: @config.symbols.src}
-		{id: 'buttons', src: @config.buttons.src}
-	]
+		@stage = new createjs.Stage canvas
 
-	@loader = new createjs.LoadQueue false
-	@loader.on 'complete', @init
-	@loader.loadManifest manifest
+		@stage.enableMouseOver 10
+		
+		manifest = [
+			{id: 'bg', src: @config.background}
+			{id: 'symbols', src: @config.symbols.src}
+			{id: 'buttons', src: @config.buttons.src}
+		]
+
+		@loader = new createjs.LoadQueue false
+		@loader.on 'complete', @init
+		@loader.loadManifest manifest
 
 Slots.init = =>
-	Slots.user = new Slots.User
+	Slots.user = new Slots.User Slots.config.user
 	
-	Slots.calculator = new Slots.Calculator
-	Slots.symbolBuilder = new Slots.SymbolBuilder
-	Slots.lineBuilder = new Slots.LineBuilder
-	Slots.state = new Slots.State
+	Slots.user.fetch().done ->
+		Slots.symbolBuilder = new Slots.SymbolBuilder
+		Slots.lineBuilder = new Slots.LineBuilder
+		Slots.state = new Slots.State
 
-	createjs.Ticker.timingMod = createjs.Ticker.RAF_SYNCHED
-	createjs.Ticker.setFPS Slots.config.targetFPS
-	createjs.Ticker.on 'tick', Slots.state.tick
+		createjs.Ticker.timingMod = createjs.Ticker.RAF_SYNCHED
+		createjs.Ticker.setFPS Slots.config.targetFPS
+		createjs.Ticker.on 'tick', Slots.state.tick
 
-class Slots.Calculator
-	constructor: (opts = {})->
-		@payouts = opts.payouts or Slots.config.payouts
-		@lines = opts.lines or Slots.config.lines
+class Slots.User extends Backbone.Model
+	urlRoot: '/api/users'
 
-		@payouts.sort (a, b)->
-			return 1 if a.probability < b.probability
-			return -1 if a.probability > b.probability
-			0
+	spin: (wager)->
+		dfr = $.Deferred()
 
-		@probabilityTotal = @payouts.reduce ((a, b)-> a + b.probability), 0
+		$.post("#{@url()}/spin", wager).success (results)=>
+			@set('credits', results.credits)
+			dfr.resolve(results)
 
-	spawnValue: ->
-		num = Math.random() * @probabilityTotal
-		
-		ceil = 0
-		for payout in @payouts
-			floor = ceil
-			ceil += payout.probability
-
-			return payout.symbol if floor <= num < ceil
-
-		payout.symbol
-
-	checkWins: (results, opts)->
-		results.reward = 0
-		results.wins = []
-		# results.values = [[9,9,9],[9,9,9],[9,9,9],[9,9,9],[9,9,9]]
-
-		return results if Slots.user.getCredits() < opts.linesBet * opts.bet
-
-		Slots.user.deductCredits(opts.linesBet * opts.bet)
-
-		for line, lineI in @lines
-			break if lineI >= opts.linesBet
-
-			matches = []
-			matchValue = results.values[0][line[0]]
-			multiplier = 1
-
-			for symbolI, reelI in line
-				symbol =
-					value: results.values[reelI][symbolI]
-					position: [reelI, symbolI]
-
-				if symbol.value is matchValue or symbol.value > 7 or matchValue > 7
-					matches.push symbol
-				else 
-					break
-
-				multiplier++ if symbol.value is 9
-				matchValue = symbol.value if symbol.value <= 7
-
-			if matches.length >= 3
-				prize = @payouts.filter((val)-> val.symbol is matchValue)[0].wins[matches.length - 3]
-				prize *= multiplier
-				
-				results.reward += prize
-
-				results.wins.push {line: lineI, matches: matches}
-		
-		results.reward *= opts.bet
-
-		Slots.user.addCredits results.reward
-				
-		results
-
-	getSpinResults: (opts)->
-		defer = $.Deferred()
-		results = {}
-		results.values = []
-
-		for i in [0..4]
-			for j in [0..2]
-				results.values[i] = [] unless results.values[i]
-				results.values[i][j] = @spawnValue()
-
-		results = @checkWins results, opts
-
-		setTimeout (-> defer.resolve results), 500
-
-		defer.promise()
-
-class Slots.User
-	constructor: (opts = {})->
-		@credits = 0
-		
-		if opts.credits
-			@addCredits(opts.credits)
-		else
-			@addCredits 100
-		
-		return
-
-	addCredits: (credits)->
-		return unless typeof credits is 'number'
-		
-		@credits += credits
-		return
-
-	deductCredits: (credits)->
-		return 0 unless typeof credits is 'number'
-
-		if credits > @credits
-			credits = @credits
-			@credits = 0
-		else
-			@credits -= credits
-
-		credits
-
-	getCredits: ->
-		@credits
+		dfr.promise()
 
 class Slots.State
 	constructor: (opts = {})->
@@ -412,7 +184,7 @@ class Slots.State
 		@winField = new createjs.Text 0, config.win.font, config.win.color
 		_.extend @winField, attrs, {x: config.win.x, y: config.win.y}
 
-		@balanceField = new createjs.Text Slots.user.getCredits(), config.balance.font, config.balance.color
+		@balanceField = new createjs.Text Slots.user.get('credits'), config.balance.font, config.balance.color
 		_.extend @balanceField, attrs, {x: config.balance.x, y: config.balance.y}
 		
 		Slots.stage.addChild @linesField
@@ -453,22 +225,21 @@ class Slots.State
 		@winField.text = win
 		Slots.stage.update()
 
-	updateCredits: (credits)->
-		@balanceField.text = Slots.user.getCredits()
+	updateCredits: (addCredits = 0)->
+		credits = Slots.user.get('credits') + addCredits
+		@balanceField.text = credits
 		Slots.stage.update()
 
 	spin: =>
 		return if @spinningReelCount > 0
 
-		while Slots.user.getCredits() < @linesBet * @bet
+		while Slots.user.get('credits') < @linesBet * @bet
 			if @bet > 1
 				@decrementBet()
 			else if @linesBet > 1
 				@decrementLines()
 			else
 				return @openInsufficientCreditsDialog()
-
-		@updateCredits()
 
 		for line in @lines
 			Slots.stage.removeChild line
@@ -479,7 +250,10 @@ class Slots.State
 		
 		@spinButton.gotoAndPlay 'flash'
 		
-		Slots.calculator.getSpinResults(linesBet: @linesBet, bet: @bet).done @handleSpinResults
+		@updateWin 0
+		@updateCredits(- @linesBet * @bet)
+		
+		Slots.user.spin(lines: @linesBet, bet: @bet).done @handleSpinResults
 
 	openInsufficientCreditsDialog: ->
 		alert "You're done."
@@ -573,7 +347,7 @@ class Slots.Reel
 		@defer = $.Deferred()
 
 	completeSpin: (opts)->		
-		@values = opts.values.concat Slots.calculator.spawnValue()
+		@values = opts.values.concat Math.floor(Math.random() * @numSymbols)
 		@timeSpinning = @spinDuration if @timeSpinning > @spinDuration
 		@timeSpinning -= @spinDelay * @position
 
