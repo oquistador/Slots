@@ -9,7 +9,12 @@ var path = require('path');
 var mongoose = require('mongoose');
 var passport = require('passport');
 
-mongoose.connect('mongodb://localhost/slots');
+var uristring =
+	process.env.MONGOLAB_URI ||
+	process.env.MONGOHQ_URL ||
+	'mongodb://localhost/slots';
+
+mongoose.connect(uristring);
 
 var models = require('./models');
 
