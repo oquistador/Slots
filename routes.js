@@ -36,14 +36,6 @@ module.exports = function(app, passport) {
 		});
 	});
 
-	app.get('/test_api', function(req, res) {
-		if (req.isAuthenticated()) {
-			res.render('testApi', {user: req.user});
-		} else {
-			res.redirect('/');
-		}
-	});
-
 	app.get('/api/users/:id', function(req, res, next) {
 		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
 		res.json({email: req.user.email, credits: req.user.credits});
