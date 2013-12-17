@@ -5,17 +5,21 @@ module.exports = function(grunt) {
 			js: {
 				dest: 'app/public/javascripts',
 				src: 'app/assets/javascripts',
-				components: 'app/components'
+				components: 'app/components',
+				config: 'app/config'
 			}
 		},
 		watch: {
 			coffee: {
 				files: ['<%= app.js.src %>/*.coffee'],
-				tasks: ['coffee']
+				tasks: ['coffee:compile']
 			}
 		},
 		coffee: {
-			compile: {
+			compile {
+				options: {
+					bare: true
+				},
 				files: {'<%= app.js.dest %>/app.js': ['<%= app.js.src %>/*.coffee']}
 			}
 		},
