@@ -1,0 +1,11 @@
+{
+  "name": "Slots",
+  "version": "0.1",
+  "dependencies": {
+    "easeljs": "*",
+    "preloadjs": "git://github.com/CreateJS/PreloadJS.git",
+    "jQuery": "~2",
+    "underscore": "~1",
+    "backbone": "~1"
+  }
+}
