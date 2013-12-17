@@ -1,5 +1,5 @@
 var User = require('./models');
-var config = require('./config');
+var config = require('./config/app');
 
 module.exports = function(app, passport) {
 	app.get('/', function(req, res) {

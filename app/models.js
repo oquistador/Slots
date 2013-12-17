@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var hash = require('./hash');
 var spin = require('./spin');
-var config = require('./config');
+var config = require('./config/app');
 
 UserSchema = mongoose.Schema({
 	email: {
