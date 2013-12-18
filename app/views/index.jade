@@ -12,14 +12,14 @@ block content
 		script(src='/javascripts/vendor.js')
 		script.
 			"use strict"
+
 			window.Slots = window.Slots || {};
-			
-			window.Slots.config = window.Slots.config || {};
-			window.Slots.config.user = {
-				id: 'lmp',
-				email: 'lmp',
-				credits: 100
-			};
+
+			(function(Slots, undefined){
+				window.Slots.config = window.Slots.config || {};
+				window.Slots.config.user = {id: '#{user.id}'};
+			})(window.Slots);
+
 		script(src='/javascripts/app.js')
 	else
 		h1

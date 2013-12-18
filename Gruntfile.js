@@ -32,8 +32,8 @@ module.exports = function(grunt) {
 			
 			clientConfig: {
 				options: {
-					banner: 'var Slots = Slots || {};\nSlots.config = Slots.config || {};\n_.extend(Slots.config, ',
-					footer: ');'
+					banner: '(function(Slots, undefined){\nSlots.config = Slots.config || {};\n_.extend(Slots.config, ',
+					footer: ');\n})(window.Slots || {});'
 				},
 				dest: '<%= paths.js.config %>/client_config.js',
 				src: '<%= paths.js.config %>/shared.json'
@@ -54,7 +54,7 @@ module.exports = function(grunt) {
 			clientApp: {
 				options: {
 					banner: '(function(undefined){\n',
-					footer: '\n}());'
+					footer: '})();'
 				},
 				dest: '<%= paths.js.dest %>/app.js',
 				src: [

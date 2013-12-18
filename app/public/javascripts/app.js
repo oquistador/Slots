@@ -1,5 +1,5 @@
 (function(undefined){
-var Slots = Slots || {};
+(function(Slots, undefined){
 Slots.config = Slots.config || {};
 _.extend(Slots.config, {
   "targetFPS": 60,
@@ -187,11 +187,12 @@ _.extend(Slots.config, {
     [1, 0, 1, 2, 1]
   ]
 });
+})(window.Slots || {});
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-window.Slots = (function(Slots) {
+(function(Slots) {
   "use strict";
   var _ref,
     _this = this;
@@ -810,8 +811,6 @@ window.Slots = (function(Slots) {
     return SymbolBuilder;
 
   })();
-  $(Slots.load());
-  return Slots;
+  return $(Slots.load());
 })(window.Slots || {});
-
-}());
+})();

@@ -1,4 +1,4 @@
-var Slots = Slots || {};
+(function(Slots, undefined){
 Slots.config = Slots.config || {};
 _.extend(Slots.config, {
   "targetFPS": 60,
@@ -186,3 +186,4 @@ _.extend(Slots.config, {
     [1, 0, 1, 2, 1]
   ]
 });
+})(window.Slots || {});

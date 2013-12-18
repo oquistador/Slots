@@ -1,4 +1,4 @@
-window.Slots = ((Slots)->
+((Slots)->
 	"use strict"
 	
 	Slots.load = ->
@@ -463,6 +463,4 @@ window.Slots = ((Slots)->
 			sprite
 
 	$(Slots.load())
-
-	Slots
 )(window.Slots or {})
