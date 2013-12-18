@@ -1,27 +1,24 @@
-window.Slots = {test: 'val'}
-
 window.Slots = ((Slots)->
-	Slots = Slots or {}
-
+	"use strict"
+	
 	Slots.load = ->
-		$.ajax('/api/config').done (config)=>
-			@config = config
+		return unless Slots.config
 
-			$canvas = $('canvas')
-			$canvas.attr width: @config.width, height: @config.height
-			$canvas.on 'mousedown', -> false
+		$canvas = $('canvas')
+		$canvas.attr width: Slots.config.width, height: Slots.config.height
+		$canvas.on 'mousedown', -> false
 
-			@stage = new createjs.Stage $canvas[0]
+		@stage = new createjs.Stage $canvas[0]
 
-			manifest = [
-				{id: 'bg', src: @config.background}
-				{id: 'symbols', src: @config.symbols.src}
-				{id: 'buttons', src: @config.buttons.src}
-			]
+		manifest = [
+			{id: 'bg', src: Slots.config.background}
+			{id: 'symbols', src: Slots.config.symbols.src}
+			{id: 'buttons', src: Slots.config.buttons.src}
+		]
 
-			@loader = new createjs.LoadQueue false
-			@loader.on 'complete', @init
-			@loader.loadManifest manifest
+		@loader = new createjs.LoadQueue false
+		@loader.on 'complete', @init
+		@loader.loadManifest manifest
 
 	Slots.init = =>
 		Slots.user = new Slots.User Slots.config.user
@@ -465,7 +462,7 @@ window.Slots = ((Slots)->
 
 			sprite
 
-	Slots.load()
+	$(Slots.load())
 
 	Slots
-)(window.Slots)
+)(window.Slots or {})

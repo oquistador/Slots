@@ -1,5 +1,4 @@
 var User = require('./models');
-var config = require('./config/app');
 
 module.exports = function(app, passport) {
 	app.get('/', function(req, res) {
@@ -49,11 +48,5 @@ module.exports = function(app, passport) {
 	app.post('/api/users/:id/spin', function(req, res, next) {
 		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
 		req.user.spin(req, res, next);
-	});
-
-	app.get('/api/config', function(req, res, next) {
-		if (!req.isAuthenticated()) return res.json({message: 'unauthorized'}, 401);
-		config.user = {id: req.user.id, email: req.user.email, credits: req.user.credits}
-		res.json(config);
 	});
 };

@@ -1,4 +1,4 @@
-var config = require('./config/app');
+var config = require('./config/server_config');
 
 config.payouts.sort(function(a, b) {
 	if (a.probability < b.probability) return 1;

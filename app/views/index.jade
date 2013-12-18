@@ -10,6 +10,16 @@ block content
 			span
 				a#request-credits Get more credits
 		script(src='/javascripts/vendor.js')
+		script.
+			"use strict"
+			window.Slots = window.Slots || {};
+			
+			window.Slots.config = window.Slots.config || {};
+			window.Slots.config.user = {
+				id: 'lmp',
+				email: 'lmp',
+				credits: 100
+			};
 		script(src='/javascripts/app.js')
 	else
 		h1
