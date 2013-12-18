@@ -1,3 +1,4 @@
 node_modules
 .DS_Store
 app/bower_components
+app/assets/javascripts/app.js
