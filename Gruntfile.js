@@ -30,7 +30,6 @@ module.exports = function(grunt) {
 			vendor: {
 				dest: '<%= paths.js.dest %>/vendor.js',
 				src: [
-				// TODO: The createjs assets need to be compiled
 					'<%= paths.js.components %>/preloadjs/lib/preloadjs-0.4.1.min.js',
 					'<%= paths.js.components %>/easeljs/lib/easeljs-0.7.1.min.js',
 					'<%= paths.js.components %>/jQuery/dist/jquery.js',
@@ -82,7 +81,6 @@ module.exports = function(grunt) {
 	});
 
 	grunt.loadNpmTasks('grunt-contrib-clean');
-	grunt.loadNpmTasks('grunt-contrib-copy');
 	grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-coffee');
