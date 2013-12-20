@@ -28,13 +28,14 @@ module.exports = function(grunt) {
 
 		concat: {
 			vendor: {
+				options: {stripBanners: true},
 				dest: '<%= paths.js.dest %>/vendor.js',
 				src: [
 					'<%= paths.js.components %>/preloadjs/lib/preloadjs-0.4.1.min.js',
 					'<%= paths.js.components %>/easeljs/lib/easeljs-0.7.1.min.js',
-					'<%= paths.js.components %>/jQuery/dist/jquery.js',
-					'<%= paths.js.components %>/underscore/underscore.js',
-					'<%= paths.js.components %>/backbone/backbone.js',
+					'<%= paths.js.components %>/jQuery/dist/jquery.min.js',
+					'<%= paths.js.components %>/underscore/underscore-min.js',
+					'<%= paths.js.components %>/backbone/backbone-min.js',
 				]
 			},
 
@@ -57,15 +58,23 @@ module.exports = function(grunt) {
 			},
 			
 			clientApp: {
-				options: {
-					banner: '(function(undefined){\n',
-					footer: '})();'
-				},
 				dest: '<%= paths.js.dest %>/app.js',
 				src: [
 					'<%= concat.clientConfig.dest %>',
 					'<%= coffee.compile.dest %>'
 				]
+			}
+		},
+
+		uglify: {
+			app: {
+				options: {
+					sourceMap: 'app.min.map',
+					sourceMappingURL: 'app.js',
+					wrap: true
+				},
+				dest: '<%= paths.js.dest %>/app.min.js',
+				src: '<%= concat.clientApp.dest %>',
 			}
 		},
 
@@ -97,10 +106,13 @@ module.exports = function(grunt) {
 		'coffee',
 		'concat:clientConfig',
 		'concat:clientApp',
-		'clean:client'
+		'clean:client',
+		'uglify'
 	]);
 
 	grunt.registerTask('buildVendorJS', [
 		'concat:vendor'
 	]);
+
+	grunt.registerTask('default', ['build']);
 };

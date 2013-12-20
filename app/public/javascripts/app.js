@@ -1,4 +1,3 @@
-(function(undefined){
 (function(Slots, undefined){
 Slots.config = Slots.config || {};
 _.extend(Slots.config, {
@@ -813,4 +812,3 @@ var __hasProp = {}.hasOwnProperty,
   })();
   return $(Slots.load());
 })(window.Slots || {});
-})();
