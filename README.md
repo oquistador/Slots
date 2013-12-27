@@ -16,4 +16,4 @@ Configuration
 
 Most configuration can be done in the shared configuration file [app/config/shared.json]( https://github.com/oquistador/Slots/blob/master/app/config/shared.json). This JSON file gets merged into the client and server side scripts via [Grunt](https://github.com/gruntjs/grunt). All of the **presentation logic** is in [app/assets/javascripts/app.coffee](https://github.com/oquistador/Slots/blob/master/app/assets/javascripts/app.coffee) and all of the **win calculation logic** is in [app/spin.js](https://github.com/oquistador/Slots/blob/master/app/spin.js) if you need to tweak anything.
 
-Since this app uses the awesome node module [passport](https://github.com/jaredhanson/passport), there's *tons* of other authentication strategies you can use.
+Since this app uses the awesome node middleware [passport](https://github.com/jaredhanson/passport), there's *tons* of other authentication strategies you can use.
